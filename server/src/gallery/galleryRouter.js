@@ -124,6 +124,51 @@ const PROXY_HEADERS = [
 // instead of the request hanging until the browser gives up.
 const PROXY_TIMEOUT = Number(process.env.EHV_PROXY_TIMEOUT) || 20000
 
+// redirects are followed by hand so that every hop is checked against the
+// allowlist (axios would follow them to any host, e.g. an internal address)
+const PROXY_MAX_REDIRECTS = 2
+
+/** next hop of an image redirect, or null when it leaves the allowlist */
+function redirectTarget(location, from) {
+  if (!location) return null
+  let next
+  try {
+    next = new URL(location, from).href
+  } catch (e) {
+    return null
+  }
+  return isAllowedImageUrl(next) ? canonicalUrl(next) : null
+}
+
+/** GET an image, following at most PROXY_MAX_REDIRECTS allowlisted redirects */
+async function fetchImage(url, req) {
+  let target = url
+  for (let hop = 0; ; hop++) {
+    const response = await axios.get(target, {
+      // site cookies go to the site only, never to third-party H@H hosts
+      headers: isSiteUrl(target)
+        ? { Cookie: upstreamCookieString(req.cookies) }
+        : {},
+      responseType: 'stream',
+      timeout: PROXY_TIMEOUT,
+      maxRedirects: 0,
+      validateStatus: (status) => status >= 200 && status < 400,
+    })
+    const status = response.status || 200
+    if (status < 300) return response
+    if (response.data && response.data.destroy) response.data.destroy()
+    const next =
+      hop < PROXY_MAX_REDIRECTS &&
+      redirectTarget(response.headers && response.headers.location, target)
+    if (!next) {
+      throw Object.assign(new Error('image host redirect refused'), {
+        code: 'EREDIRECT',
+      })
+    }
+    target = next
+  }
+}
+
 router.get('/proxy', async (req, res) => {
   // only e-hentai/exhentai/ehgt/H@H image hosts: no open proxy / SSRF
   if (!isAllowedImageUrl(req.query.url)) {
@@ -135,15 +180,7 @@ router.get('/proxy', async (req, res) => {
   req.on('close', () => {
     if (upstream && !res.writableFinished) upstream.destroy()
   })
-  axios
-    .get(url, {
-      // site cookies go to the site only, never to third-party H@H hosts
-      headers: isSiteUrl(url)
-        ? { Cookie: upstreamCookieString(req.cookies) }
-        : {},
-      responseType: 'stream',
-      timeout: PROXY_TIMEOUT,
-    })
+  fetchImage(url, req)
     .then((response) => {
       upstream = response.data
       PROXY_HEADERS.forEach((key) => {

@@ -98,4 +98,75 @@ describe('/api/gallery/proxy', () => {
     expect(res.headers['set-cookie']).toBeUndefined()
     expect(get.mock.calls[0][1].headers.Cookie).toMatch(/igneous=x/)
   })
+
+  it('does not follow a redirect to a host outside the allowlist', async () => {
+    const hop = new PassThrough()
+    const get = vi.spyOn(axios, 'get').mockResolvedValueOnce({
+      status: 302,
+      data: hop,
+      headers: { location: 'http://169.254.169.254/latest/meta-data/' },
+    })
+    const res = fakeRes()
+    await handler(fakeReq('https://abcd.efgh.hath.network/h/x/1.jpg'), res)
+    await flush()
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(get.mock.calls[0][1].maxRedirects).toBe(0)
+    expect(hop.destroyed).toBe(true)
+    expect(res.statusCode).toBe(502)
+  })
+
+  it('follows an allowlisted redirect, re-deciding cookies per hop', async () => {
+    const body = new PassThrough()
+    const get = vi
+      .spyOn(axios, 'get')
+      .mockResolvedValueOnce({
+        status: 302,
+        data: new PassThrough(),
+        headers: { location: 'https://abcd.efgh.hath.network:4433/h/k/1.jpg' },
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: body,
+        headers: { 'content-type': 'image/jpeg' },
+      })
+    const res = fakeRes()
+    await handler(fakeReq('https://exhentai.org/fullimg/1/1/x/1.jpg'), res)
+    await flush()
+    body.end(Buffer.from('img'))
+    await flush()
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(get.mock.calls[0][1].headers.Cookie).toMatch(/igneous=x/)
+    expect(get.mock.calls[1][0]).toBe(
+      'https://abcd.efgh.hath.network:4433/h/k/1.jpg'
+    )
+    expect(get.mock.calls[1][1].headers).toEqual({})
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toBe('image/jpeg')
+  })
+
+  it('stops after two redirect hops and refuses spoofed redirect hosts', async () => {
+    const hop = (location) => ({
+      status: 301,
+      data: new PassThrough(),
+      headers: { location },
+    })
+    let get = vi
+      .spyOn(axios, 'get')
+      .mockResolvedValue(hop('https://ehgt.org/loop.jpg'))
+    let res = fakeRes()
+    await handler(fakeReq('https://ehgt.org/a.jpg'), res)
+    await flush()
+    expect(get).toHaveBeenCalledTimes(3)
+    expect(res.statusCode).toBe(502)
+    vi.restoreAllMocks()
+
+    get = vi
+      .spyOn(axios, 'get')
+      .mockResolvedValue(hop('https://evil.test;.exhentai.org/x'))
+    res = fakeRes()
+    await handler(fakeReq('https://ehgt.org/a.jpg'), res)
+    await flush()
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(res.statusCode).toBe(502)
+  })
 })
