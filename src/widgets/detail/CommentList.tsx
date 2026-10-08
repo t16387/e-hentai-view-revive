@@ -22,6 +22,7 @@ import dayjs from 'dayjs'
 import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
 import React, { forwardRef, useEffect } from 'react'
+import { parseGalleryUrl } from '@/utils/search'
 
 const useStyles = makeStyles(() =>
   createStyles({
@@ -47,13 +48,15 @@ const CommentListContent = forwardRef<HTMLUListElement, CommentListProps>(
         // 监听链接，跳转到自己的详情页
         document
           .querySelectorAll<HTMLAnchorElement>(
-            '.commnets-list a[href^="https://exhentai.org/g"]'
+            '.commnets-list a[href*="hentai.org/g/"]'
           )
           .forEach((a) => {
+            // both e-hentai.org and exhentai.org gallery links (EHV_SITE)
+            const target = parseGalleryUrl(a.href)
+            if (!target) return
             a.onclick = (e) => {
               e.preventDefault()
-              const path = a.href.replace('https://exhentai.org/g', '')
-              router.push('/[gid]/[token]', path)
+              router.push('/[gid]/[token]', `/${target.gid}/${target.token}`)
             }
           })
       }
