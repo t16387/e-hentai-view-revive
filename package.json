@@ -3,6 +3,10 @@
   "productName": "EhentaiView",
   "version": "4.2.0",
   "main": "server/src/app.js",
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "license": "MIT",
   "homepage": "https://exhentai.appspot.com",
   "author": {
@@ -26,9 +30,9 @@
     "build": "next build",
     "analyze": "cross-env ANALYZE=true next build",
     "type:check": "tsc --noEmit",
-    "start": "NODE_ENV=production node server/src/server.js",
+    "start": "cross-env NODE_ENV=production node server/src/server.js",
     "release": "node scripts/release.js",
-    "prepare": "husky install"
+    "prepare": "husky install || true"
   },
   "lint-staged": {
     "{pages,public,server,src,script}/**/*.{js,jsx,ts,tsx}": [
@@ -85,9 +89,8 @@
     "jszip": "^3.7.0",
     "lodash": "^4.17.21",
     "lodash-es": "^4.17.21",
-    "next": "^12.0.10",
+    "next": "~12.3.7",
     "next-i18next": "^10.2.0",
-    "next-offline": "^5.0.5",
     "node-cache": "^5.1.2",
     "nprogress": "^0.2.0",
     "qs": "^6.10.1",

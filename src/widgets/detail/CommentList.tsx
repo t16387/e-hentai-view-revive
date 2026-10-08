@@ -104,6 +104,7 @@ const CommentListContent = forwardRef<HTMLUListElement, CommentListProps>(
     )
   }
 )
+CommentListContent.displayName = 'CommentListContent'
 const CommentList: React.FC<CommentListProps> = ({ commentList }) => {
   const theme = useTheme()
   const matches = useIsmobile()

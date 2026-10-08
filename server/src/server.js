@@ -1,7 +1,5 @@
 // server.js
 const next = require('next')
-const createProxyMiddleware =
-  require('http-proxy-middleware').createProxyMiddleware
 const devProxy = {
   '/api': {
     target: 'http://localhost:8080', // 端口自己配置合适的
@@ -18,6 +16,8 @@ const handle = app.getRequestHandler()
 
   const server = dev ? require('express')() : require('./app')
   if (dev && devProxy) {
+    // dev-only: required lazily so a production install never needs them
+    const { createProxyMiddleware } = require('http-proxy-middleware')
     const cookieParser = require('cookie-parser')
     server.use(cookieParser())
     Object.keys(devProxy).forEach(function (context) {
