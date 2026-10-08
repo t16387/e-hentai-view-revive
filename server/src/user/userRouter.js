@@ -1,6 +1,6 @@
 const express = require('express')
 const { login, validateLogin, getUserSetting } = require('./userApi')
-const { getCookieString } = require('../utils/cookies')
+const { getCookieString, upstreamCookieString } = require('../utils/cookies')
 const cache = require('../cache')
 const router = express.Router()
 
@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
 })
 
 router.post('/setting', async (req, res) => {
-  const { cookie } = await getUserSetting(getCookieString(req.cookies))
+  const { cookie } = await getUserSetting(upstreamCookieString(req.cookies))
   Object.entries(cookie).forEach(([key, value]) =>
     res.cookie(key, value, cookieOption(req))
   )

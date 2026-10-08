@@ -5,6 +5,7 @@ require('express-async-errors')
 const cookieParser = require('cookie-parser')
 const app = express()
 const listEndpoints = require('express-list-endpoints')
+const { requiresLogin, siteName } = require('./config/api')
 // const { isNil } = require('lodash')
 
 // parse application/x-www-form-urlencoded
@@ -19,8 +20,12 @@ app.use(cookieParser())
 app.use((req, res, next) => {
   if (req.url.startsWith('/api')) console.log('%s -> %s', req.method, req.url)
 
-  // if no login, api will return error
-  if (req.url.startsWith('/api/') && !req.url.startsWith('/api/user')) {
+  // exhentai needs a logged-in account; the public e-hentai site does not
+  if (
+    requiresLogin &&
+    req.url.startsWith('/api/') &&
+    !req.url.startsWith('/api/user')
+  ) {
     if (req.cookies && !req.cookies.ipb_member_id) {
       return res.json({ error: true, message: 'No login' })
     }
@@ -48,7 +53,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 8080
 app.listen(PORT, () => {
   console.log(
-    `app listening on http://localhost:${PORT}, env: ${process.env.NODE_ENV}`
+    `app listening on http://localhost:${PORT}, env: ${process.env.NODE_ENV}, site: ${siteName}`
   )
 })
 

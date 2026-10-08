@@ -7,8 +7,13 @@ const {
   galleryDetailPage,
   gallerytorrentsList,
 } = require('./galleryApi')
-const { getCookieString } = require('../utils/cookies')
+const { upstreamCookieString } = require('../utils/cookies')
 const cache = require('../cache')
+const {
+  isAllowedImageUrl,
+  isSiteUrl,
+  isImagePageUrl,
+} = require('../utils/upstreamUrl')
 const router = express.Router()
 
 router.get('/', async (req, res) => {
@@ -20,14 +25,14 @@ router.get('/', async (req, res) => {
     JSON.stringify({
       page,
       f_search,
-      cookie: getCookieString(req.cookies),
+      cookie: upstreamCookieString(req.cookies),
     })
 
   let content = cache.get(cacheKey)
   if (!content) {
     content = await galleryList(
       { page, f_search },
-      getCookieString(req.cookies)
+      upstreamCookieString(req.cookies)
     )
 
     cache.set(cacheKey, content, 180)
@@ -41,7 +46,7 @@ router.get('/:gid/:token', async (req, res) => {
 
   const content = await galleryDetail(
     { gid, token },
-    getCookieString(req.cookies)
+    upstreamCookieString(req.cookies)
   )
 
   // 为read页面缓存下数据
@@ -56,7 +61,7 @@ router.get('/:gid/:token/torrent', async (req, res) => {
 
   const content = await gallerytorrentsList(
     { gid, token },
-    getCookieString(req.cookies)
+    upstreamCookieString(req.cookies)
   )
 
   res.json({ error: false, list: content })
@@ -70,7 +75,7 @@ router.get('/:gid/:token/:p', async (req, res) => {
   if (!content) {
     content = await galleryDetailPage(
       { gid, token, p },
-      getCookieString(req.cookies)
+      upstreamCookieString(req.cookies)
     )
     cache.set(cacheKey, content)
   }
@@ -80,36 +85,56 @@ router.get('/:gid/:token/:p', async (req, res) => {
 
 router.get('/loadImg', async (req, res) => {
   const { url } = req.query
+  if (!isImagePageUrl(url)) {
+    return res
+      .status(400)
+      .json({ error: true, message: 'invalid image page url' })
+  }
   let content = cache.get(url)
   if (!content) {
     try {
-      content = await loadImg(url, getCookieString(req.cookies))
+      content = await loadImg(url, upstreamCookieString(req.cookies))
       cache.set(url, content, 120)
     } catch (error) {
-      return res.json({ error: true })
+      return res.json({ error: true, message: error.message })
     }
   }
 
   res.json({ error: false, url: content.url, retryURL: content.retryURL })
 })
 
+// headers worth passing through from the image host
+const PROXY_HEADERS = [
+  'content-type',
+  'content-length',
+  'last-modified',
+  'etag',
+  'accept-ranges',
+]
+
 router.get('/proxy', async (req, res) => {
   const url = req.query.url
+  // only e-hentai/exhentai/ehgt/H@H image hosts: no open proxy / SSRF
+  if (!isAllowedImageUrl(url)) {
+    return res.status(400).send('url not allowed')
+  }
   axios
     .get(url, {
-      headers: { Cookie: getCookieString(req.cookies) },
+      // site cookies go to the site only, never to third-party H@H hosts
+      headers: isSiteUrl(url)
+        ? { Cookie: upstreamCookieString(req.cookies) }
+        : {},
       responseType: 'stream',
     })
     .then((response) => {
-      Object.entries(response.headers).forEach(([key, value]) => {
-        res.setHeader(key, value)
+      PROXY_HEADERS.forEach((key) => {
+        if (response.headers[key]) res.setHeader(key, response.headers[key])
       })
       res.setHeader('cache-control', 'max-age=31536000, public, immutable')
-      res.setHeader('max-age', '31536000')
       response.data.pipe(res)
     })
     .catch((err) => {
-      res.status(500).send(err.message)
+      res.status(502).send(err.message)
     })
 })
 module.exports = router

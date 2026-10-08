@@ -1,6 +1,7 @@
 const { uniq } = require('lodash')
 const dayjs = require('dayjs')
 const { GalleryMode } = require('../constant')
+const { baseURL } = require('../config/api')
 
 /**
  * @param {Document} document
@@ -222,7 +223,7 @@ function parseDetailPageInfo(document, html) {
     posted,
     category,
     uploader,
-    url: `https://exhentai.org/g/${gid}/${token}`,
+    url: `${baseURL}/g/${gid}/${token}`,
     language,
     filesize,
     filecount,
