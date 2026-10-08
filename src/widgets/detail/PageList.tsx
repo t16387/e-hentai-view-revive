@@ -1,7 +1,8 @@
 import { loadMorePage } from '@/apis'
 import LoadMedia from '@/components/LoadMedia'
+import Thumb from '@/components/Thumb'
 import useInViewportWithDistance from '@/hooks/useInViewportWithDistance'
-import { PageListProps } from '@/interface/gallery'
+import { DetailThumbPage, PageListProps } from '@/interface/gallery'
 import { Button, Card, CardActionArea, Grid, Typography } from '@mui/material'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
@@ -42,13 +43,15 @@ const useStyles = makeStyles((theme: Theme) =>
 const PageList: React.FC<Omit<PageListProps, 'filecount'>> = ({
   url,
   initialData,
+  thumbPages,
 }) => {
   const [inView, ref] = useInViewportWithDistance<HTMLButtonElement>(600)
   const [t] = useTranslation()
   const classes = useStyles()
   const router = useRouter()
   const handleOpen = (k?: number) => {
-    if (k)
+    // k === 0 (first image) is a valid index
+    if (k !== undefined && k !== null)
       router.push(
         '/[gid]/[token]/read?current=' + k,
         url + '/read?current=' + k
@@ -56,21 +59,25 @@ const PageList: React.FC<Omit<PageListProps, 'filecount'>> = ({
     else router.push('/[gid]/[token]/read', url + '/read')
   }
 
-  const { data, error, size, setSize } = useSWRInfinite(
-    (offset) => `/api/gallery${url}/${offset}`,
-    async (url: string) => {
-      if (url.endsWith('0')) return initialData
-      return await loadMorePage(url)
+  const pageCount = thumbPages?.pageCount || 1
+  const { data, error, size, setSize } = useSWRInfinite<DetailThumbPage>(
+    (offset) =>
+      offset < pageCount ? [`/api/gallery${url}/${offset}`, offset] : null,
+    async (pageUrl: string, offset: number) => {
+      // page 0 came with the detail response
+      if (offset === 0)
+        return { ...thumbPages, list: initialData, page: 0 } as DetailThumbPage
+      return await loadMorePage(pageUrl)
     }
   )
 
-  const dataSource = data ? data.flat(1) : []
+  const dataSource = data ? data.flatMap((page) => page.list) : []
   const isLoadingInitialData = !data && !error
   const isLoadingMore =
     isLoadingInitialData ||
     (size > 0 && data && typeof data[size - 1] === 'undefined')
   const isEmpty = !isLoadingInitialData && dataSource.length === 0
-  const isReachingEnd = isEmpty || (data && data[data.length - 1].length < 20)
+  const isReachingEnd = isEmpty || (!!data && data.length >= pageCount)
 
   useEffect(() => {
     if (inView && !isLoadingMore && !isReachingEnd) setSize((t) => t + 1)
@@ -83,27 +90,33 @@ const PageList: React.FC<Omit<PageListProps, 'filecount'>> = ({
           <Grid item key={o.url} container wrap="nowrap" direction="column">
             <Grid item xs>
               <Card>
-                <CardActionArea onClick={() => handleOpen(i)}>
-                  <LoadMedia className={classes.cover} src={o.thumb} />
+                <CardActionArea onClick={() => handleOpen(o.index ?? i)}>
+                  {o.sprite ? (
+                    <Thumb src={o.thumb} sprite={o.sprite} />
+                  ) : (
+                    <LoadMedia className={classes.cover} src={o.thumb} />
+                  )}
                 </CardActionArea>
               </Card>
             </Grid>
-            <Typography align="center">{i + 1}</Typography>
+            <Typography align="center">{(o.index ?? i) + 1}</Typography>
           </Grid>
         ))}
         {isLoadingMore &&
-          new Array(20).fill(0).map((_, k) => (
-            <Grid item key={k}>
-              <Card>
-                <Skeleton
-                  variant="rectangular"
-                  animation="wave"
-                  className={classes.cover}
-                  height={150}
-                />
-              </Card>
-            </Grid>
-          ))}
+          new Array(Math.min(thumbPages?.perPage || 20, 20))
+            .fill(0)
+            .map((_, k) => (
+              <Grid item key={k}>
+                <Card>
+                  <Skeleton
+                    variant="rectangular"
+                    animation="wave"
+                    className={classes.cover}
+                    height={150}
+                  />
+                </Card>
+              </Grid>
+            ))}
       </Grid>
       <Button
         ref={ref}

@@ -41,6 +41,19 @@ router.get('/', async (req, res) => {
   res.json(content)
 })
 
+// thumbnail pages depend on the account's thumbnail setting: cache per user
+const pageCacheKey = (req, gid, token, p) =>
+  `[g${req.cookies.ipb_member_id}]/${gid}/${token}/${p}`
+
+/** list + paging metadata of one thumbnail page */
+const pagePayload = (page) => ({
+  list: page.list,
+  total: page.total,
+  perPage: page.perPage,
+  pageCount: page.pageCount,
+  page: page.page,
+})
+
 router.get('/:gid/:token', async (req, res) => {
   const { gid, token } = req.params
 
@@ -49,12 +62,11 @@ router.get('/:gid/:token', async (req, res) => {
     upstreamCookieString(req.cookies)
   )
 
-  // 为read页面缓存下数据
-  const cacheKey = `/${gid}/${token}/0`
-  cache.set(cacheKey, content.list)
-  content.list = content.list.list
+  // 为read页面缓存下数据 (cache thumbnail page 0 for the reader)
+  cache.set(pageCacheKey(req, gid, token, 0), content.list)
+  const { list, ...thumbPages } = pagePayload(content.list)
 
-  res.json(content)
+  res.json({ ...content, list, thumbPages })
 })
 router.get('/:gid/:token/torrent', async (req, res) => {
   const { gid, token } = req.params
@@ -67,8 +79,12 @@ router.get('/:gid/:token/torrent', async (req, res) => {
   res.json({ error: false, list: content })
 })
 router.get('/:gid/:token/:p', async (req, res) => {
-  const { gid, token, p } = req.params
-  const cacheKey = `/${gid}/${token}/${p}`
+  const { gid, token } = req.params
+  const p = parseInt(req.params.p, 10)
+  if (!/^\d+$/.test(gid) || !/^[0-9a-f]+$/.test(token) || !(p >= 0)) {
+    return res.status(400).json({ error: true, message: 'bad request' })
+  }
+  const cacheKey = pageCacheKey(req, gid, token, p)
 
   let content = cache.get(cacheKey)
 
@@ -80,7 +96,7 @@ router.get('/:gid/:token/:p', async (req, res) => {
     cache.set(cacheKey, content)
   }
 
-  res.json({ error: false, list: content.list, total: content.total })
+  res.json({ error: false, ...pagePayload(content) })
 })
 
 router.get('/loadImg', async (req, res) => {

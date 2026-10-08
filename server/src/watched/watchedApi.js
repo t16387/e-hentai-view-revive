@@ -5,7 +5,7 @@ const { parseGalleryList } = require('../gallery/galleryParser')
 const { GalleryMode } = require('../constant')
 async function getWatched(page, cookies) {
   const res = await axios.get(`${watchedURL}`, {
-    params: { page, inline_set: 'dm_l' },
+    params: { page },
     headers: { Cookie: cookies },
   })
 

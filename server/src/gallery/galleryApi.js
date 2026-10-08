@@ -9,6 +9,7 @@ const {
   parseBigImg,
   parseDetailPageInfo,
   parseTorrentList,
+  isContentWarning,
 } = require('./galleryParser')
 const JSDOM = require('jsdom').JSDOM
 const dayjs = require('dayjs')
@@ -65,8 +66,8 @@ async function galleryList({ page, f_search }, cookies) {
     headers: {
       Cookie: cookies,
     },
-    params: { page, f_search, inline_set: 'dm_l' },
-    maxRedirects: 2,
+    // no inline_set: the parser detects the display mode itself
+    params: { page, f_search },
   })
   const document = new JSDOM(res.data).window.document
   let list = []
@@ -97,13 +98,16 @@ async function galleryDetail({ gid, token }, cookies) {
   let tagList = []
   let info = {}
 
-  const res = await axios.get(`${baseURL}/g/${gid}/${token}?inline_set=ts_l`, {
+  // no inline_set=ts_l: thumbnails-per-page is read from the page, and every
+  // ?p=N request then uses the same account setting as page 0
+  const res = await axios.get(`${baseURL}/g/${gid}/${token}/`, {
     headers: { Cookie: cookies },
-    maxRedirects: 2,
   })
   const document = new JSDOM(res.data).window.document
   if (document.body.textContent === 'Key missing, or incorrect key provided.')
     throw new Error('[404]Key missing, or incorrect key provided.')
+  if (isContentWarning(document))
+    throw new Error('[warning] content warning page was not skipped')
   list = parseDetailPageList(document)
   commentList = parseDetailPageCommentList(document)
   tagList = parseDetailPageTagList(document)
@@ -113,10 +117,13 @@ async function galleryDetail({ gid, token }, cookies) {
   return { list, commentList, tagList, info }
 }
 async function galleryDetailPage({ gid, token, p }, cookies) {
-  const res = await axios.get(`${baseURL}/g/${gid}/${token}?p=${p}`, {
+  const res = await axios.get(`${baseURL}/g/${gid}/${token}/`, {
+    params: { p },
     headers: { Cookie: cookies },
   })
   const document = new JSDOM(res.data).window.document
+  if (isContentWarning(document))
+    throw new Error('[warning] content warning page was not skipped')
   return parseDetailPageList(document)
 }
 async function loadImg(url, cookies) {
@@ -127,7 +134,10 @@ async function loadImg(url, cookies) {
       const document = new JSDOM(res.data).window.document
       return parseBigImg(document)
     } catch (error) {
-      if (count++ > 3) throw new Error('')
+      // quota / layout errors will not fix themselves: fail fast
+      if (/^\[(509|image)\]/.test(error.message)) throw error
+      if (count++ >= 2) throw error
+      await new Promise((r) => setTimeout(r, 300 * count))
       return await load()
     }
   }

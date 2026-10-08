@@ -90,7 +90,11 @@ const Detail: NextPage = () => {
       <Info info={data.info} tagList={data.tagList} />
       <CommentList commentList={data.commentList || []} />
       <Divider variant="fullWidth" className={classes.divider} />
-      <PageList initialData={data.list} url={`/${gid}/${token}`} />
+      <PageList
+        initialData={data.list}
+        thumbPages={data.thumbPages}
+        url={`/${gid}/${token}`}
+      />
     </Layout>
   )
 }

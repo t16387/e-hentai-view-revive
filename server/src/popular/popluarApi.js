@@ -5,7 +5,6 @@ const { parseGalleryList } = require('../gallery/galleryParser')
 const { GalleryMode } = require('../constant')
 async function getPopular(cookies) {
   const res = await axios.get(popularURL, {
-    params: { inline_set: 'dm_l' },
     headers: { Cookie: cookies },
   })
 

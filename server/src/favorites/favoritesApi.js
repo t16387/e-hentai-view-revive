@@ -6,22 +6,13 @@ const { parseFavoritesSettingInfo } = require('./favoritesPaeser')
 const qs = require('qs')
 const { GalleryMode } = require('../constant')
 async function getFavorites({ page, favcat }, cookies) {
-  let res = await axios.get(`${favoritesURL}`, {
+  // the parser detects the display mode; no second request with inline_set
+  const res = await axios.get(`${favoritesURL}`, {
     params: { page, favcat },
     headers: { Cookie: cookies },
   })
 
-  let document = new JSDOM(res.data).window.document
-
-  const mode = document.querySelector('[selected="selected"]').textContent
-
-  if (mode !== 'Compact') {
-    res = await axios.get(`${favoritesURL}`, {
-      params: { page, favcat, inline_set: 'dm_l' },
-      headers: { Cookie: cookies },
-    })
-    document = new JSDOM(res.data).window.document
-  }
+  const document = new JSDOM(res.data).window.document
 
   if (document.body.innerHTML.includes('No hits found')) {
     return { list: [], total: 0 }

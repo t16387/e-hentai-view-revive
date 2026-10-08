@@ -1,6 +1,6 @@
 import Axios from 'axios'
 import Router from 'next/router'
-import { DetailPageListItemProps } from '@/interface/gallery'
+import { DetailThumbPage } from '@/interface/gallery'
 export const axios = Axios.create({})
 // const maxQueueLength = 8
 // let count = 0
@@ -60,11 +60,9 @@ export async function setting() {
 }
 
 export async function loadMorePage(url: string) {
-  const res = await axios.get<{
-    error: boolean
-    list: DetailPageListItemProps[]
-    total: number
-  }>(url)
-  if (res.data.error) throw new Error('')
-  return res.data.list
+  const res = await axios.get<
+    DetailThumbPage & { error: boolean; message?: string }
+  >(url)
+  if (res.data.error) throw new Error(res.data.message || 'load page failed')
+  return res.data
 }

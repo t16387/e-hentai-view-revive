@@ -53,10 +53,33 @@ export interface Torrent {
   url: string
 }
 
+/** position of one thumbnail inside a CSS sprite sheet (2024+ #gdt markup) */
+export interface ThumbSprite {
+  width: number
+  height: number
+  x: number
+  y: number
+}
 export interface DetailPageListItemProps {
+  /** absolute 0-based image index in the gallery */
+  index: number
   thumb: string
+  /** null for legacy single-image thumbnails */
+  sprite?: ThumbSprite | null
+  /** image page url (/s/<imgkey>/<gid>-<n>) */
   url: string
   aspectratio: number
+}
+/** paging metadata of the detail page thumbnail grid */
+export interface ThumbPagesInfo {
+  total: number
+  /** thumbnails per ?p= page, derived from the page (20/40/100/200/400) */
+  perPage: number
+  pageCount: number
+}
+export interface DetailThumbPage extends ThumbPagesInfo {
+  list: DetailPageListItemProps[]
+  page: number
 }
 export interface commentListItemProps {
   time: number
@@ -80,6 +103,7 @@ export interface tagListItemProps {
 export interface Detailpage {
   info: IndexListItemPorps
   list: DetailPageListItemProps[]
+  thumbPages: ThumbPagesInfo
   commentList: commentListItemProps[]
   tagList: tagListItemProps[]
   error?: boolean
@@ -93,6 +117,7 @@ export interface GalleriesPage {
 }
 export interface PageListProps {
   initialData: DetailPageListItemProps[]
+  thumbPages: ThumbPagesInfo
   url: string
   filecount: number
 }
