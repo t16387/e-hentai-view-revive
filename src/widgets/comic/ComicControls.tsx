@@ -10,7 +10,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SettingsIcon from '@mui/icons-material/Settings'
 import { useDebounceFn } from 'ahooks'
 import { useRouter } from 'next/router'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import ComicSettings from './ComicSettings'
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -44,19 +44,12 @@ const ComicControls: React.FC<{ total: number; current: number }> = ({
     setCurrentPage(current)
   }, [current])
 
-  const fn = () => {
-    const gid = router.query.gid as string
-    const token = router.query.token as string
-
-    router.replace(
-      `/[gid]/[token]/read?current=${currentPage}`,
-      `/${gid}/${token}/read?current=${currentPage}`,
-      { scroll: false }
-    )
-
-    jumpPage$.emit(currentPage)
-  }
-  const { run } = useDebounceFn(fn, { wait: 500 })
+  // the slider only moves the reader; read.tsx keeps ?current= in sync
+  const currentPageRef = useRef(currentPage)
+  currentPageRef.current = currentPage
+  const { run } = useDebounceFn(() => jumpPage$.emit(currentPageRef.current), {
+    wait: 300,
+  })
 
   useEffect(() => {
     return toggleContorls$.subscribe(() => setOpen((t) => !t))
@@ -107,7 +100,9 @@ const ComicControls: React.FC<{ total: number; current: number }> = ({
       </footer>
 
       <SlideUpDialog open={openConfig} onClose={() => setOpenConfig(false)}>
-        <ComicSettings onChange={fn} />
+        {/* switching mode needs no index hand-off: the remounted list
+            starts from the shared store's current index */}
+        <ComicSettings />
       </SlideUpDialog>
     </>
   )

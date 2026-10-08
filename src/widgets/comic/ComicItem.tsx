@@ -1,18 +1,15 @@
 import { EVENT_LOAD_MORE_PAGE } from '@/constant'
 import useComicItemImage from '@/hooks/useComicItem'
 import useEventManager from '@/hooks/useEventListenerEnhance'
-import { DetailPageListItemProps } from '@/interface/gallery'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { mutate } from 'swr'
-import {
-  ComicListDataSourceProps,
-  computedAspectratioHeight,
-  pageSize,
-} from './utils'
+import { ComicListDataSourceProps, computedAspectratioHeight } from './utils'
+import { ComicSlot, DEFAULT_ASPECT, pagesToLoad } from './paging'
 import ProxyImg from '@/components/ProxyImg'
+import Thumb from '@/components/Thumb'
 
 const useStyles = makeStyles<Theme, {}>((theme: Theme) =>
   createStyles({
@@ -36,34 +33,60 @@ const useStyles = makeStyles<Theme, {}>((theme: Theme) =>
   })
 )
 
-const ComicItem: React.FC<
-  Partial<DetailPageListItemProps> & {
-    index: number
-    comicPagesKey: string
-    noMinHeight?: boolean
-  }
-> = ({
-  index,
-  thumb,
-  url,
-  aspectratio = 210 / 297,
-  comicPagesKey,
-  noMinHeight,
-}) => {
+const ComicItem: React.FC<{
+  index: number
+  /** reader slot; undefined until its thumbnail page has been loaded */
+  item: ComicSlot
+  total: number
+  perPage?: number
+  comicPagesKey: string
+  noMinHeight?: boolean
+}> = ({ index, item, total, perPage, comicPagesKey, noMinHeight }) => {
   const classes = useStyles()
-  const ref = useRef<HTMLDivElement>(null)
-  const [pageUrl, setPageUrl] = useState(url)
-  const { data } = useComicItemImage(pageUrl ? pageUrl : null)
+  const url = item?.url
+  const aspectratio = item?.aspectratio || DEFAULT_ASPECT
+
+  // The image page URL is derived from props on every render. It used to be
+  // useState(url): an item mounted while its slot was still empty kept
+  // url=undefined forever, so full images never loaded in vertical mode past
+  // the first thumbnail pages. Only the nl= retry key is local state, and it
+  // resets when the slot's URL changes.
+  const [nl, setNl] = useState<string | null>(null)
+  useEffect(() => setNl(null), [url])
+  const pageUrl = url ? (nl ? `${url}?nl=${nl}` : url) : null
+  const { data } = useComicItemImage(pageUrl)
+
+  // ask for the thumbnail page holding this image (and a few ahead)
   const loadMorePage$ = useEventManager(EVENT_LOAD_MORE_PAGE)
   useEffect(() => {
-    loadMorePage$.emit(Math.floor((index + 7) / pageSize))
-  }, [index, loadMorePage$])
+    pagesToLoad(index, perPage || 0, total).forEach((p) =>
+      loadMorePage$.emit(p)
+    )
+  }, [index, perPage, total, loadMorePage$])
 
   const minHeight = computedAspectratioHeight(aspectratio)
 
+  // remember the real aspect ratio (natural size, not the rendered box)
+  const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget
+    if (!naturalWidth || !naturalHeight) return
+    const ratio = naturalWidth / naturalHeight
+    if (Math.abs(ratio - aspectratio) / aspectratio < 0.02) return
+    mutate(
+      comicPagesKey,
+      (old: ComicListDataSourceProps) => {
+        const slot = old?.list?.[index]
+        if (!slot || slot.url !== url) return old
+        const list = old.list.slice()
+        list[index] = { ...slot, aspectratio: ratio }
+        return { ...old, list }
+      },
+      false
+    )
+  }
+
   return (
     <div
-      ref={ref}
       style={{ minHeight: noMinHeight ? '' : minHeight }}
       className={classes.root}
       data-index={index}
@@ -76,33 +99,22 @@ const ComicItem: React.FC<
           alt={index.toString()}
           className={classes.img}
           onError={() => {
-            setPageUrl(url + '?nl=' + data.retryURL)
+            if (data.retryURL && nl !== data.retryURL) setNl(data.retryURL)
           }}
-          onLoad={(e) => {
-            if (e.currentTarget.width / e.currentTarget.height === aspectratio)
-              return
-            mutate(comicPagesKey, (data: ComicListDataSourceProps) => {
-              data.list[index]!.aspectratio =
-                e.currentTarget.width / e.currentTarget.height
-              return { ...data }
-            })
-          }}
+          onLoad={handleLoad}
         />
-      ) : (
+      ) : item?.sprite ? (
+        <Thumb src={item.thumb} sprite={item.sprite} maxWidth={1280} />
+      ) : item?.thumb ? (
         <ProxyImg
-          src={thumb}
+          src={item.thumb}
           alt={index.toString()}
           className={classes.img}
-          onLoad={(e) => {
-            if (e.currentTarget.width / e.currentTarget.height === aspectratio)
-              return
-            mutate(comicPagesKey, (data: ComicListDataSourceProps) => {
-              data.list[index]!.aspectratio =
-                e.currentTarget.width / e.currentTarget.height
-              return { ...data }
-            })
-          }}
         />
+      ) : (
+        <div className={classes.placeholder} style={{ minHeight }}>
+          {index + 1}
+        </div>
       )}
     </div>
   )

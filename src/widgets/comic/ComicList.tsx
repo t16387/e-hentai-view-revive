@@ -1,21 +1,16 @@
 import { EVENT_JUMP_PAGE, EVENT_TOGGLE_CONTROLS } from '@/constant'
-import useComicData from '@/hooks/useComicData'
+import useComicData, { setComicCurrent } from '@/hooks/useComicData'
 import useEventManager from '@/hooks/useEventListenerEnhance'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
-import { useEventListener, useMount } from 'ahooks'
-import React, { useEffect, useRef } from 'react'
-import { mutate } from 'swr'
+import { useEventListener } from 'ahooks'
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import ComicControls from './ComicControls'
 import ComicItem from './ComicItem'
 import ComicStatus from './ComicStatus'
-import {
-  ComicListDataSourceProps,
-  computedCurrentTarget,
-  computedFullHeight,
-  computedTargetHeight,
-} from './utils'
+import { indexAtScroll, prefixOffsets, visibleRange } from './paging'
+import { readerWidth } from './utils'
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -29,73 +24,98 @@ const useStyles = makeStyles((theme: Theme) =>
     },
     virtualItem: {
       position: 'absolute',
-      transition: 'transform 0.3s ease',
       width: '100%',
       maxWidth: 1280,
     },
   })
 )
 
-const ComicList: React.FC<{ comicUrl: string; defaultCurrent: number }> = ({
-  comicUrl,
-  defaultCurrent,
-}) => {
+const scroller = () => document.scrollingElement as HTMLElement
+
+const ComicList: React.FC<{ comicUrl: string }> = ({ comicUrl }) => {
   const comicPagesKey = `${comicUrl}/read`
   const classes = useStyles()
   const { data } = useComicData(comicUrl)
-  const dataRef = useRef(data)
-  dataRef.current = data
+  const list = data?.list
+  const offsets = useMemo(
+    () => prefixOffsets(list || [], readerWidth()),
+    [list]
+  )
+  const offsetsRef = useRef(offsets)
+  offsetsRef.current = offsets
+  const currentRef = useRef(data?.current || 0)
+  currentRef.current = data?.current || 0
 
   const jumpPage$ = useEventManager(EVENT_JUMP_PAGE)
   const toggleControls$ = useEventManager(EVENT_TOGGLE_CONTROLS)
 
-  useMount(() => {
-    if (defaultCurrent === -1) {
-      document.scrollingElement!.scrollTop = computedTargetHeight(
-        data!.current,
-        data!.list
-      )
-    } else {
-      document.scrollingElement!.scrollTop = computedTargetHeight(
-        defaultCurrent,
-        data!.list
-      )
-      mutate(comicPagesKey, (data: ComicListDataSourceProps) => ({
-        ...data,
-        current: defaultCurrent,
-      }))
+  // start where the shared index is (survives switching from ltr/rtl)
+  const anchor = useRef<{ index: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    const index = currentRef.current
+    scroller().scrollTop = offsetsRef.current[index] || 0
+    anchor.current = { index, top: offsetsRef.current[index] || 0 }
+  }, [])
+
+  // keep the current image in place when items above it change height
+  // (thumbnail pages arriving, images reporting their real size)
+  useLayoutEffect(() => {
+    const a = anchor.current
+    if (!a) return
+    const top = offsets[a.index] || 0
+    if (top !== a.top) {
+      scroller().scrollTop += top - a.top
+      a.top = top
     }
-  })
+  }, [offsets])
 
   useEffect(() => {
     return jumpPage$.subscribe((pageIndex: number) => {
-      if (!dataRef.current) return
-      if (dataRef.current.current !== pageIndex) {
-        document.scrollingElement!.scrollTop = computedTargetHeight(
-          pageIndex,
-          dataRef.current.list
-        )
-        mutate(comicPagesKey, (data: ComicListDataSourceProps) => ({
-          ...data,
-          current: pageIndex,
-        }))
-      }
+      const top = offsetsRef.current[pageIndex] || 0
+      anchor.current = { index: pageIndex, top }
+      scroller().scrollTop = top
+      setComicCurrent(comicPagesKey, pageIndex)
     })
   }, [comicPagesKey, jumpPage$])
 
   useEventListener('scroll', () => {
-    if (document.scrollingElement) {
-      const top = document.scrollingElement.scrollTop
-      mutate(comicPagesKey, (data: ComicListDataSourceProps) => {
-        const current = computedCurrentTarget(data.list, top)
-        if (current !== data.current) {
-          return { ...data, current }
-        }
-      })
-    }
+    const el = scroller()
+    if (!el) return
+    const current = indexAtScroll(
+      offsetsRef.current,
+      el.scrollTop,
+      window.innerHeight
+    )
+    anchor.current = { index: current, top: offsetsRef.current[current] || 0 }
+    if (current !== currentRef.current) setComicCurrent(comicPagesKey, current)
   })
 
-  if (!data || data.total === 0) return null
+  if (!data || data.total === 0 || !list) return null
+
+  // only mount (and therefore fetch) the images around the current one
+  const { start, end } = visibleRange(
+    offsets,
+    data.current,
+    typeof window === 'undefined' ? 800 : window.innerHeight
+  )
+  const items = []
+  for (let k = start; k < end; k++) {
+    items.push(
+      <div
+        key={k}
+        className={classes.virtualItem}
+        style={{ transform: `translateY(${offsets[k]}px)` }}
+      >
+        <ComicItem
+          index={k}
+          item={list[k]}
+          total={data.total}
+          perPage={data.perPage}
+          comicPagesKey={comicPagesKey}
+        />
+      </div>
+    )
+  }
 
   return (
     <>
@@ -103,32 +123,11 @@ const ComicList: React.FC<{ comicUrl: string; defaultCurrent: number }> = ({
         className={classes.root}
         onClick={() => toggleControls$.emit()}
         style={{
-          minHeight: computedFullHeight(data.list),
+          minHeight: offsets[offsets.length - 1],
           position: 'relative',
         }}
       >
-        {data.list.map((o, k) => {
-          return (
-            <div
-              key={k}
-              className={classes.virtualItem}
-              style={{
-                transform: `translateY(${computedTargetHeight(
-                  k,
-                  data.list
-                )}px)`,
-              }}
-            >
-              <ComicItem
-                index={k}
-                thumb={o?.thumb}
-                url={o?.url}
-                aspectratio={o?.aspectratio}
-                comicPagesKey={comicPagesKey}
-              />
-            </div>
-          )
-        })}
+        {items}
       </div>
       <ComicStatus total={data.total} current={data.current} />
       <ComicControls total={data.total} current={data.current} />

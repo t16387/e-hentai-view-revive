@@ -1,20 +1,18 @@
 import Loading from '@/components/Loading'
 import { EVENT_JUMP_PAGE, EVENT_TOGGLE_CONTROLS } from '@/constant'
-import useComicData from '@/hooks/useComicData'
+import useComicData, { setComicCurrent } from '@/hooks/useComicData'
 import useEventManager from '@/hooks/useEventListenerEnhance'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import SwiperCore, { Controller, Virtual } from 'swiper'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import 'swiper/swiper-bundle.min.css'
-import { mutate } from 'swr'
 import { useComicConfigState } from './ComicConfig'
 import ComicControls from './ComicControls'
 import ComicItem from './ComicItem'
 import ComicStatus from './ComicStatus'
-import { ComicListDataSourceProps } from './utils'
 
 SwiperCore.use([Controller, Virtual])
 
@@ -50,46 +48,40 @@ const useStyles = makeStyles((theme: Theme) =>
 
 const ComicHorizontalList: React.FC<{
   comicUrl: string
-  defaultCurrent: number
-}> = ({ comicUrl, defaultCurrent }) => {
+}> = ({ comicUrl }) => {
   const comicPagesKey = `${comicUrl}/read`
   const classes = useStyles()
   const { data } = useComicData(comicUrl)
   const toggleContorls$ = useEventManager(EVENT_TOGGLE_CONTROLS)
   const jumpPage$ = useEventManager(EVENT_JUMP_PAGE)
 
-  const [swiperController, setSwiperController] = useState<SwiperCore | null>(
-    null
-  )
+  const [swiper, setSwiper] = useState<SwiperCore | null>(null)
 
   const [config] = useComicConfigState()
   const dataRef = useRef(data)
   dataRef.current = data
-  const defaultCurrentRef = useRef(defaultCurrent)
-  defaultCurrentRef.current = defaultCurrent
+
+  // Start slide for each Swiper instance. The Swiper is remounted on every
+  // direction change (key), so take the shared index at that moment rather
+  // than a prop captured when the page first opened.
+  const initialSlide = useMemo(
+    () => dataRef.current?.current || 0,
+    [config.direction] // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
   useEffect(() => {
-    if (swiperController) {
-      if (defaultCurrentRef.current === -1) {
-        swiperController.slideTo(dataRef.current?.current || 0, 0)
-        return () => {}
-      }
-      swiperController.slideTo(defaultCurrentRef.current, 0)
-      mutate(comicPagesKey, (data: ComicListDataSourceProps) => ({
-        ...(data ? data : { current: 0, list: [], total: 0 }),
-        current: defaultCurrentRef.current,
-      }))
+    if (!swiper) return
+    const target = dataRef.current?.current || 0
+    if (swiper.activeIndex !== target) swiper.slideTo(target, 0)
+    // always listen for jumps (slider), whatever the entry point was;
+    // previously the subscription was skipped when ?current= was missing
+    return jumpPage$.subscribe((pageIndex: number) => {
+      swiper.slideTo(pageIndex, 0)
+    })
+  }, [jumpPage$, swiper])
 
-      return jumpPage$.subscribe((pageIndex: number) => {
-        swiperController.slideTo(pageIndex, 0)
-      })
-    }
-  }, [comicPagesKey, jumpPage$, swiperController])
-
-  const handleSliderChange = (swiper: SwiperCore) => {
-    mutate(comicPagesKey, (data: ComicListDataSourceProps) => ({
-      ...(data ? data : { current: 0, list: [], total: 0 }),
-      current: swiper.realIndex,
-    }))
+  const handleSliderChange = (s: SwiperCore) => {
+    setComicCurrent(comicPagesKey, s.activeIndex)
   }
 
   if (!data || data.total === 0)
@@ -109,22 +101,23 @@ const ComicHorizontalList: React.FC<{
         <Swiper
           key={config.direction}
           dir={config.direction}
+          initialSlide={initialSlide}
           onSlideChange={handleSliderChange}
-          onSwiper={setSwiperController}
-          virtual={{ addSlidesAfter: 3 }}
+          onSwiper={setSwiper}
+          virtual={{ addSlidesBefore: 1, addSlidesAfter: 2 }}
         >
           {data.list.map((o, k) => (
-            <SwiperSlide key={o?.url ?? k} data-hovindex={k}>
+            <SwiperSlide key={k} data-hovindex={k}>
               <div
                 className={
                   config.imgFit ? classes.imgFitContainer : classes.imgContainer
                 }
               >
                 <ComicItem
-                  key={o?.url || k}
                   index={k}
-                  thumb={o?.thumb}
-                  url={o?.url}
+                  item={o}
+                  total={data.total}
+                  perPage={data.perPage}
                   comicPagesKey={comicPagesKey}
                   noMinHeight
                 />

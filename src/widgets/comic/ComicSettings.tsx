@@ -15,17 +15,15 @@ import { ComicConfigProps, useComicConfigState } from './ComicConfig'
 /**
  * comic setting ui
  */
-const ComicSettings: React.FC<{ onChange?: () => void }> = ({ onChange }) => {
+const ComicSettings: React.FC = () => {
   const [t] = useTranslation()
   const [config, setConfig] = useComicConfigState()
 
   const handleToggleButton: SelectProps['onChange'] = (event) => {
     setConfig((t) => {
       const direction = event.target.value as ComicConfigProps['direction']
-      t.direction = direction
-      return { ...t }
+      return { ...t, direction }
     })
-    onChange?.()
   }
 
   const isVertical = config.direction === 'vertical'
