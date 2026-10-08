@@ -21,7 +21,7 @@ async function getFavoritesInfo(cookies) {
 }
 
 async function updateFavorite({ gid, token, favcat }, cookies) {
-  await axios({
+  await axios.request({
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Cookie: cookies,

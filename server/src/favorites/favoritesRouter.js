@@ -6,6 +6,8 @@ const {
   updateFavorite,
 } = require('./favoritesApi')
 const cache = require('../cache')
+const { cached } = require('../utils/coalesce')
+const { detailKey, favoritesInfoKey } = require('../utils/cacheKeys')
 const { pickListParams, listCacheKey } = require('../gallery/listParams')
 const router = express.Router()
 
@@ -28,7 +30,12 @@ router.get('/', async (req, res) => {
 })
 
 router.get('/info', async (req, res) => {
-  const list = await getFavoritesInfo(upstreamCookieString(req.cookies))
+  // FavIconButton is mounted twice per gallery view (toolbar + menu)
+  const list = await cached(
+    favoritesInfoKey(userCacheScope(req.cookies)),
+    60,
+    () => getFavoritesInfo(upstreamCookieString(req.cookies))
+  )
   res.json({ error: false, list })
 })
 
@@ -39,6 +46,8 @@ router.put('/add/:gid/:token', async (req, res) => {
     { gid, token, favcat },
     upstreamCookieString(req.cookies)
   )
+  const scope = userCacheScope(req.cookies)
+  cache.del([favoritesInfoKey(scope), detailKey(scope, gid, token)])
   res.json({ error: false, message: 'success' })
 })
 

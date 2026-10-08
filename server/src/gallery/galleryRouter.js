@@ -10,6 +10,8 @@ const {
 } = require('./galleryApi')
 const { upstreamCookieString, userCacheScope } = require('../utils/cookies')
 const cache = require('../cache')
+const { cached, coalesce } = require('../utils/coalesce')
+const { detailKey, torrentKey } = require('../utils/cacheKeys')
 const { pickListParams, listCacheKey } = require('./listParams')
 const {
   isAllowedImageUrl,
@@ -59,9 +61,12 @@ router.get('/:gid/:token', async (req, res) => {
   const { gid, token } = req.params
   if (!isGalleryRef(gid, token)) return badRequest(res)
 
-  const content = await galleryDetail(
-    { gid, token },
-    upstreamCookieString(req.cookies)
+  // short cache + coalescing: the detail page, the reader and SWR
+  // revalidations used to fetch the same gallery several times in a row
+  const content = await cached(
+    detailKey(userCacheScope(req.cookies), gid, token),
+    30,
+    () => galleryDetail({ gid, token }, upstreamCookieString(req.cookies))
   )
 
   // 为read页面缓存下数据 (cache thumbnail page 0 for the reader)
@@ -74,9 +79,10 @@ router.get('/:gid/:token/torrent', async (req, res) => {
   const { gid, token } = req.params
   if (!isGalleryRef(gid, token)) return badRequest(res)
 
-  const content = await gallerytorrentsList(
-    { gid, token },
-    upstreamCookieString(req.cookies)
+  const content = await cached(
+    torrentKey(userCacheScope(req.cookies), gid, token),
+    300,
+    () => gallerytorrentsList({ gid, token }, upstreamCookieString(req.cookies))
   )
 
   res.json({ error: false, list: content })
@@ -89,15 +95,9 @@ router.get('/:gid/:token/:p', async (req, res) => {
   }
   const cacheKey = pageCacheKey(req, gid, token, p)
 
-  let content = cache.get(cacheKey)
-
-  if (!content) {
-    content = await galleryDetailPage(
-      { gid, token, p },
-      upstreamCookieString(req.cookies)
-    )
-    cache.set(cacheKey, content)
-  }
+  const content = await cached(cacheKey, 600, () =>
+    galleryDetailPage({ gid, token, p }, upstreamCookieString(req.cookies))
+  )
 
   res.json({ error: false, ...pagePayload(content) })
 })
@@ -115,7 +115,19 @@ router.get('/loadImg', async (req, res) => {
   let content = cache.get(cacheKey)
   if (!content) {
     try {
-      content = await loadImg(url, upstreamCookieString(req.cookies))
+      // identical lookups arriving together share one upstream request
+      content = await coalesce(cacheKey, () =>
+        loadImg(url, upstreamCookieString(req.cookies))
+      )
+      // the browser may load this URL directly (or via /proxy): only ever
+      // hand out image hosts from the allowlist
+      if (!isAllowedImageUrl(content.url)) {
+        return res.json({
+          error: true,
+          message: '[image] unexpected image host',
+        })
+      }
+      content.url = canonicalUrl(content.url)
       cache.set(cacheKey, content, 120)
     } catch (error) {
       return res.json({ error: true, message: error.message })
@@ -137,7 +149,7 @@ const PROXY_HEADERS = [
 // H@H nodes often listen on high ports; an unreachable node must fail fast
 // so the reader's error handler can ask for another server (nl= retry)
 // instead of the request hanging until the browser gives up.
-const PROXY_TIMEOUT = Number(process.env.EHV_PROXY_TIMEOUT) || 20000
+const PROXY_TIMEOUT = Number(process.env.EHV_PROXY_TIMEOUT) || 10000
 
 // redirects are followed by hand so that every hop is checked against the
 // allowlist (axios would follow them to any host, e.g. an internal address)
