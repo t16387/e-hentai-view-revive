@@ -86,5 +86,7 @@
   "ShowTag.All": "모두",
   "ShowTag.Hidden": "숨김",
   "Similar": "유사",
-  "imgFit":"픽처 어댑티브"
+  "imgFit":"픽처 어댑티브",
+  "TapToReload":"탭하여 다시 불러오기",
+  "imgDirect":"H@H에서 직접 이미지 불러오기"
 }

@@ -2,6 +2,7 @@ import Loading from '@/components/Loading'
 import { EVENT_JUMP_PAGE, EVENT_TOGGLE_CONTROLS } from '@/constant'
 import useComicData, { setComicCurrent } from '@/hooks/useComicData'
 import useEventManager from '@/hooks/useEventListenerEnhance'
+import { useReaderImageQueue } from '@/hooks/useReaderImages'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
@@ -58,6 +59,10 @@ const ComicHorizontalList: React.FC<{
   const [swiper, setSwiper] = useState<SwiperCore | null>(null)
 
   const [config] = useComicConfigState()
+  // after useComicData (page-request subscription), see ComicList
+  useReaderImageQueue(comicPagesKey, data, {
+    direct: config.imgDirect !== false,
+  })
   const dataRef = useRef(data)
   dataRef.current = data
 

@@ -1,6 +1,8 @@
 import { EVENT_JUMP_PAGE, EVENT_TOGGLE_CONTROLS } from '@/constant'
 import useComicData, { setComicCurrent } from '@/hooks/useComicData'
 import useEventManager from '@/hooks/useEventListenerEnhance'
+import { useReaderImageQueue } from '@/hooks/useReaderImages'
+import { useComicConfigState } from './ComicConfig'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
@@ -36,6 +38,12 @@ const ComicList: React.FC<{ comicUrl: string }> = ({ comicUrl }) => {
   const comicPagesKey = `${comicUrl}/read`
   const classes = useStyles()
   const { data } = useComicData(comicUrl)
+  const [config] = useComicConfigState()
+  // must come after useComicData: its page-request emits need the
+  // subscription that useComicData sets up
+  useReaderImageQueue(comicPagesKey, data, {
+    direct: config.imgDirect !== false,
+  })
   const list = data?.list
   const offsets = useMemo(
     () => prefixOffsets(list || [], readerWidth()),

@@ -1,10 +1,12 @@
 import { EVENT_LOAD_MORE_PAGE } from '@/constant'
-import useComicItemImage from '@/hooks/useComicItem'
+import { useImageState } from '@/hooks/useReaderImages'
 import useEventManager from '@/hooks/useEventListenerEnhance'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
+import { useTranslation } from 'next-i18next'
+import { Button } from '@mui/material'
 import { mutate } from 'swr'
 import { ComicListDataSourceProps, computedAspectratioHeight } from './utils'
 import { ComicSlot, DEFAULT_ASPECT, pagesToLoad } from './paging'
@@ -22,7 +24,15 @@ const useStyles = makeStyles<Theme, {}>((theme: Theme) =>
       display: 'flex',
       alignItems: 'center',
     },
-    img: { width: '100%' },
+    img: { width: '100%', display: 'block' },
+    frame: { position: 'relative', width: '100%' },
+    reload: {
+      position: 'absolute',
+      left: '50%',
+      top: '50%',
+      transform: 'translate(-50%, -50%)',
+      zIndex: 1,
+    },
     placeholder: {
       width: '100%',
       display: 'flex',
@@ -46,15 +56,14 @@ const ComicItem: React.FC<{
   const url = item?.url
   const aspectratio = item?.aspectratio || DEFAULT_ASPECT
 
-  // The image page URL is derived from props on every render. It used to be
-  // useState(url): an item mounted while its slot was still empty kept
-  // url=undefined forever, so full images never loaded in vertical mode past
-  // the first thumbnail pages. Only the nl= retry key is local state, and it
-  // resets when the slot's URL changes.
-  const [nl, setNl] = useState<string | null>(null)
-  useEffect(() => setNl(null), [url])
-  const pageUrl = url ? (nl ? `${url}?nl=${nl}` : url) : null
-  const { data } = useComicItemImage(pageUrl)
+  // Image page -> URL -> preloaded image is handled by the reader's image
+  // queue (useReaderImages / imageLoader.ts): bounded concurrency, prefetch
+  // in reading direction, nl= retries. The item only renders its state, so
+  // its slot URL is always read from the latest props (the old useState(url)
+  // bug cannot come back).
+  const [t] = useTranslation()
+  const [image, loader] = useImageState(comicPagesKey, index)
+  const loaded = image.status === 'loaded' && !!image.src
 
   // ask for the thumbnail page holding this image (and a few ahead)
   const loadMorePage$ = useEventManager(EVENT_LOAD_MORE_PAGE)
@@ -93,29 +102,46 @@ const ComicItem: React.FC<{
       // eslint-disable-next-line jsx-a11y/aria-role
       role="comic-item"
     >
-      {data ? (
-        <ProxyImg
-          src={data.url}
-          alt={index.toString()}
-          className={classes.img}
-          onError={() => {
-            if (data.retryURL && nl !== data.retryURL) setNl(data.retryURL)
-          }}
-          onLoad={handleLoad}
-        />
-      ) : item?.sprite ? (
-        <Thumb src={item.thumb} sprite={item.sprite} maxWidth={1280} />
-      ) : item?.thumb ? (
-        <ProxyImg
-          src={item.thumb}
-          alt={index.toString()}
-          className={classes.img}
-        />
-      ) : (
-        <div className={classes.placeholder} style={{ minHeight }}>
-          {index + 1}
-        </div>
-      )}
+      <div className={classes.frame}>
+        {loaded ? (
+          <img
+            src={image.src}
+            alt={index.toString()}
+            className={classes.img}
+            decoding="async"
+            referrerPolicy="no-referrer"
+            // a preloaded image that still fails (cache evicted, node gone)
+            onError={() => loader.reportError(index, image.src)}
+            onLoad={handleLoad}
+          />
+        ) : item?.sprite ? (
+          <Thumb src={item.thumb} sprite={item.sprite} maxWidth={1280} />
+        ) : item?.thumb ? (
+          <ProxyImg
+            src={item.thumb}
+            alt={index.toString()}
+            className={classes.img}
+          />
+        ) : (
+          <div className={classes.placeholder} style={{ minHeight }}>
+            {index + 1}
+          </div>
+        )}
+        {image.status === 'failed' && (
+          <Button
+            data-reload-button
+            variant="contained"
+            color="primary"
+            className={classes.reload}
+            onClick={(e) => {
+              e.stopPropagation()
+              loader.reload(index)
+            }}
+          >
+            {t('TapToReload')}
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

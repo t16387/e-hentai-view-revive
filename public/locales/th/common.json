@@ -86,5 +86,7 @@
   "ShowTag.All": "ทั้งหมด",
   "ShowTag.Hidden": "ซ่อน",
   "Similar": "คล้ายกัน",
-  "imgFit":"การปรับภาพ"
+  "imgFit":"การปรับภาพ",
+  "TapToReload":"แตะเพื่อโหลดใหม่",
+  "imgDirect":"โหลดภาพจาก H@H โดยตรง"
 }

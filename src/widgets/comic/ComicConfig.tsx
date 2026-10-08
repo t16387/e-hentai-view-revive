@@ -11,11 +11,17 @@ export interface ComicConfigProps {
    * horizontal mode image fit width/height
    */
   imgFit?: boolean
+  /**
+   * load full images straight from the H@H server (signed URLs, no cookies
+   * needed); falls back to the server's image proxy on failure
+   */
+  imgDirect?: boolean
 }
 
 const defualtComicConfig: ComicConfigProps = {
   direction: 'vertical',
   imgFit: true,
+  imgDirect: true,
 }
 
 const ComicConfigContext = createContext<

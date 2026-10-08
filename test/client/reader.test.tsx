@@ -16,6 +16,15 @@ import useComicData, { setComicCurrent } from '@/hooks/useComicData'
 import { EVENT_LOAD_MORE_PAGE } from '@/constant'
 import { store as eventStore } from '@/hooks/useEventListenerEnhance'
 import ComicItem from '@/widgets/comic/ComicItem'
+import { disposeImageLoader, getImageLoader, useReaderImageQueue } from '@/hooks/useReaderImages'
+
+const KEY = '/1/a/read'
+let failLoads = false
+const resolveImg = vi.fn(async (page: string) => ({ url: 'https://h.example.hath.network/' + page.split('/s/')[1].split('?')[0] + '.webp', retryKey: 'key' }))
+const loadImage = vi.fn(async () => {
+  if (failLoads) throw new Error('image error')
+  return 'decoded'
+})
 
 const theme = createTheme()
 let container: HTMLDivElement
@@ -31,6 +40,11 @@ beforeEach(() => {
   document.body.appendChild(container)
   cache.clear()
   loadImg.mockClear()
+  resolveImg.mockClear()
+  loadImage.mockClear()
+  failLoads = false
+  disposeImageLoader(KEY)
+  getImageLoader(KEY, { resolve: (p) => resolveImg(p), load: () => loadImage() })
 })
 afterEach(() => {
   unmountComponentAtNode(container)
@@ -46,17 +60,67 @@ const slot = (index: number) => ({
 })
 
 describe('ComicItem (vertical-mode full images)', () => {
+  // the queue (not the item) loads images now; the regression to guard is
+  // the same: an item mounted before its slot is known must still load
+  function List({ total, list, current = 0 }: { total: number; list: any[]; current?: number }) {
+    const data = { total, list, current, perPage: 20, ready: true }
+    useReaderImageQueue(KEY, data as any, { direct: true })
+    return (
+      <>
+        {list.map((item, k) => (k >= current && k < current + 2 ? <ComicItem key={k} index={k} item={item} total={total} perPage={20} comicPagesKey={KEY} /> : null))}
+      </>
+    )
+  }
+
   it('loads the full image once its slot is filled after mounting empty', async () => {
-    const props = { index: 25, total: 60, perPage: 20, comicPagesKey: '/1/a/read' }
-    await act(async () => { render(wrap(<ComicItem {...props} item={undefined} />), container) })
+    const empty = new Array(60).fill(undefined)
+    await act(async () => { render(wrap(<List total={60} list={empty} current={25} />), container) })
     await flush()
-    expect(loadImg).not.toHaveBeenCalled()
-    // the thumbnail page arrives and fills the slot
-    await act(async () => { render(wrap(<ComicItem {...props} item={slot(5)} />), container) })
+    expect(resolveImg).not.toHaveBeenCalled()
+    // the thumbnail page arrives and fills the slots
+    const filled = empty.map((_, k) => (k >= 20 && k < 40 ? slot(k) : undefined))
+    await act(async () => { render(wrap(<List total={60} list={filled} current={25} />), container) })
     await flush()
-    expect(loadImg).toHaveBeenCalledTimes(1)
-    expect(loadImg).toHaveBeenCalledWith(slot(5).url)
-    expect(container.querySelector('img')?.getAttribute('src')).toContain(encodeURIComponent(slot(5).url + '#img'))
+    expect(resolveImg.mock.calls[0][0]).toBe(slot(25).url)
+    const img = container.querySelector('img[alt="25"]')
+    expect(img?.getAttribute('src')).toBe('https://h.example.hath.network/' + slot(25).url.split('/s/')[1] + '.webp')
+    expect(img?.getAttribute('referrerpolicy')).toBe('no-referrer')
+  })
+
+  it('shows "Tap to reload" after the retries and reloads with the nl key', async () => {
+    failLoads = true
+    vi.useFakeTimers()
+    try {
+      const list = Array.from({ length: 3 }, (_, k) => slot(k))
+      await act(async () => { render(wrap(<List total={3} list={list} />), container) })
+      for (let k = 0; k < 10; k++) await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+      const button = container.querySelector('[data-index="0"] [data-reload-button]') as HTMLButtonElement
+      expect(button).not.toBeNull()
+      const calls = resolveImg.mock.calls.filter((c) => c[0].startsWith(slot(0).url)).length
+      expect(calls).toBe(4) // first try + 3 nl retries
+      failLoads = false
+      await act(async () => { button.click(); await vi.advanceTimersByTimeAsync(10) })
+      const last = resolveImg.mock.calls.filter((c) => c[0].startsWith(slot(0).url)).pop()![0]
+      expect(last).toMatch(/\?nl=key$/)
+      expect(container.querySelector('[data-index="0"] [data-reload-button]')).toBeNull()
+      expect(container.querySelector('img[alt="0"]')).not.toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a mode switch shows an already loaded image on the first render', async () => {
+    const list = Array.from({ length: 3 }, (_, k) => slot(k))
+    await act(async () => { render(wrap(<List total={3} list={list} />), container) })
+    await flush()
+    expect(container.querySelector('img[alt="0"]')).not.toBeNull()
+    unmountComponentAtNode(container) // old mode's list goes away
+    // no act(): inspect the very first commit of the new list, before any
+    // effect or async work could load something
+    render(wrap(<List total={3} list={list} />), container)
+    expect(container.querySelector('img[alt="0"]')).not.toBeNull()
+    await flush()
+    expect(resolveImg.mock.calls.filter((c) => c[0] === slot(0).url)).toHaveLength(1) // no second lookup
   })
 
   it('asks for the thumbnail page of its index using the real page size', async () => {

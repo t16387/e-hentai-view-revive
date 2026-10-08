@@ -1,6 +1,7 @@
 import Layout from '@/components/Layout'
 import Loading from '@/components/Loading'
 import useComicData from '@/hooks/useComicData'
+import { disposeImageLoader } from '@/hooks/useReaderImages'
 import useComicReadPageHistory from '@/hooks/useComicReadPageHistory'
 import { resolveStartIndex } from '@/widgets/comic/paging'
 import { ComicListDataSourceProps } from '@/widgets/comic/utils'
@@ -24,6 +25,9 @@ const Read: NextPage = () => {
   const [history] = useComicReadPageHistory()
 
   const { data } = useComicData(comicUrl, { onlyInitData: true })
+
+  // leaving the reader cancels every pending image request of the gallery
+  useEffect(() => () => disposeImageLoader(comicPagesKey), [comicPagesKey])
 
   // Resolve the start index ONCE per visit (?current= -> saved position -> 0)
   // and put it in the shared store. Reading-mode switches only remount the

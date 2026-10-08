@@ -59,6 +59,17 @@ const ComicSettings: React.FC = () => {
             </ListItemSecondaryAction>
           </ListItem>
         )}
+        <ListItem>
+          <ListItemText>{t('imgDirect')}</ListItemText>
+          <ListItemSecondaryAction>
+            <Switch
+              checked={config.imgDirect !== false}
+              onChange={(e) =>
+                setConfig((t) => ({ ...t, imgDirect: e.target.checked }))
+              }
+            />
+          </ListItemSecondaryAction>
+        </ListItem>
       </List>
     </div>
   )

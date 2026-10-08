@@ -86,5 +86,7 @@
   "ShowTag.All": "全部显示",
   "ShowTag.Hidden": "不显示",
   "Similar": "相关画廊",
-  "imgFit":"图片自适应"
+  "imgFit":"图片自适应",
+  "TapToReload":"点击重新加载",
+  "imgDirect":"直接从 H@H 加载图片"
 }

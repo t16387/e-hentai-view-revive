@@ -86,5 +86,7 @@
   "ShowTag.All": "All",
   "ShowTag.Hidden": "Hidden",
   "Similar": "Similar",
-  "imgFit":"Picture adaptive"
+  "imgFit":"Picture adaptive",
+  "TapToReload":"Tap to reload",
+  "imgDirect":"Load images directly from H@H"
 }
