@@ -117,12 +117,21 @@ const PROXY_HEADERS = [
   'accept-ranges',
 ]
 
+// H@H nodes often listen on high ports; an unreachable node must fail fast
+// so the reader's error handler can ask for another server (nl= retry)
+// instead of the request hanging until the browser gives up.
+const PROXY_TIMEOUT = Number(process.env.EHV_PROXY_TIMEOUT) || 20000
+
 router.get('/proxy', async (req, res) => {
   const url = req.query.url
   // only e-hentai/exhentai/ehgt/H@H image hosts: no open proxy / SSRF
   if (!isAllowedImageUrl(url)) {
     return res.status(400).send('url not allowed')
   }
+  let upstream
+  req.on('close', () => {
+    if (upstream && !res.writableFinished) upstream.destroy()
+  })
   axios
     .get(url, {
       // site cookies go to the site only, never to third-party H@H hosts
@@ -130,16 +139,23 @@ router.get('/proxy', async (req, res) => {
         ? { Cookie: upstreamCookieString(req.cookies) }
         : {},
       responseType: 'stream',
+      timeout: PROXY_TIMEOUT,
     })
     .then((response) => {
+      upstream = response.data
       PROXY_HEADERS.forEach((key) => {
         if (response.headers[key]) res.setHeader(key, response.headers[key])
       })
       res.setHeader('cache-control', 'max-age=31536000, public, immutable')
-      response.data.pipe(res)
+      upstream.on('error', () => res.destroy())
+      upstream.pipe(res)
     })
     .catch((err) => {
-      res.status(502).send(err.message)
+      if (res.headersSent) return res.destroy()
+      const timedOut = err && err.code === 'ECONNABORTED'
+      res
+        .status(timedOut ? 504 : 502)
+        .send(timedOut ? 'image host timed out' : 'image host error')
     })
 })
 module.exports = router
