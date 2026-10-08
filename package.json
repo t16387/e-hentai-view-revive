@@ -30,6 +30,8 @@
     "build": "next build",
     "analyze": "cross-env ANALYZE=true next build",
     "type:check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "cross-env NODE_ENV=production node server/src/server.js",
     "release": "node scripts/release.js",
     "prepare": "husky install || true"
@@ -59,7 +61,8 @@
     "nodemon": "^2.0.7",
     "prettier": "^2.3.0",
     "semver": "^7.3.5",
-    "typescript": "^4.3.2"
+    "typescript": "^4.3.2",
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@emotion/react": "^11.7.1",
