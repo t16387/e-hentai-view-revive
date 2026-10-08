@@ -6,14 +6,40 @@ function hostMatches(hostname, domains) {
   return domains.some((d) => hostname === d || hostname.endsWith('.' + d))
 }
 
+// A plain DNS name. The allowlist is checked on the WHATWG-parsed URL, but
+// axios 0.21 connects to the host that the legacy url.parse() finds, and the
+// two disagree on hosts such as "evil.test;.exhentai.org" or
+// "evil.test%2eexhentai.org" (WHATWG: a subdomain of the site, legacy:
+// evil.test). Anything outside [a-z0-9.-] is therefore refused.
+const HOSTNAME =
+  /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/
+
 function parse(url) {
+  if (typeof url !== 'string') return null
+  // the raw authority must already be plain: no percent-escapes or
+  // backslashes for one parser to decode and the other to keep
+  const authority = /^https?:\/\/([^/?#]*)/i.exec(url)
+  if (!authority || /[%\\\s]/.test(authority[1])) return null
   try {
-    const u = new URL(String(url))
+    const u = new URL(url)
     if (u.protocol !== 'https:' && u.protocol !== 'http:') return null
+    // no userinfo: never needed for images and another parser-differential vector
+    if (u.username || u.password) return null
+    if (!HOSTNAME.test(u.hostname)) return null
     return u
   } catch (e) {
     return null
   }
+}
+
+/**
+ * The URL as serialized by the WHATWG parser, i.e. exactly the URL that was
+ * checked. Pass this (not the raw query string) to axios.
+ * @returns {string|null}
+ */
+function canonicalUrl(url) {
+  const u = parse(url)
+  return u ? u.href : null
 }
 
 /** true for an image URL this app may proxy (no SSRF to arbitrary hosts) */
@@ -39,4 +65,10 @@ function isImagePageUrl(url) {
   )
 }
 
-module.exports = { isAllowedImageUrl, isSiteUrl, isImagePageUrl, hostMatches }
+module.exports = {
+  isAllowedImageUrl,
+  isSiteUrl,
+  isImagePageUrl,
+  hostMatches,
+  canonicalUrl,
+}

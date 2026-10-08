@@ -14,6 +14,7 @@ const {
   isAllowedImageUrl,
   isSiteUrl,
   isImagePageUrl,
+  canonicalUrl,
 } = require('../utils/upstreamUrl')
 const router = express.Router()
 
@@ -89,12 +90,13 @@ router.get('/:gid/:token/:p', async (req, res) => {
 })
 
 router.get('/loadImg', async (req, res) => {
-  const { url } = req.query
-  if (!isImagePageUrl(url)) {
+  if (!isImagePageUrl(req.query.url)) {
     return res
       .status(400)
       .json({ error: true, message: 'invalid image page url' })
   }
+  // fetch exactly the URL that was checked
+  const url = canonicalUrl(req.query.url)
   let content = cache.get(url)
   if (!content) {
     try {
@@ -123,11 +125,12 @@ const PROXY_HEADERS = [
 const PROXY_TIMEOUT = Number(process.env.EHV_PROXY_TIMEOUT) || 20000
 
 router.get('/proxy', async (req, res) => {
-  const url = req.query.url
   // only e-hentai/exhentai/ehgt/H@H image hosts: no open proxy / SSRF
-  if (!isAllowedImageUrl(url)) {
+  if (!isAllowedImageUrl(req.query.url)) {
     return res.status(400).send('url not allowed')
   }
+  // fetch exactly the URL that was checked
+  const url = canonicalUrl(req.query.url)
   let upstream
   req.on('close', () => {
     if (upstream && !res.writableFinished) upstream.destroy()
