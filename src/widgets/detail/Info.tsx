@@ -31,6 +31,7 @@ import clsx from 'clsx'
 import { isNil } from 'lodash-es'
 import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
+import { searchHref, uploaderTerm } from '@/utils/search'
 import React, { useState } from 'react'
 import FavIconButton from './FavIconButton'
 import InfoCard from './InfoCard'
@@ -142,7 +143,7 @@ const Info: React.FC<InfoProps> = ({ info, tagList }) => {
             <Hidden smUp>
               <Link
                 color="inherit"
-                href={`/?f_search=uploader:${info.uploader}`}
+                href={searchHref(uploaderTerm(info.uploader), '/')}
               >
                 <Typography
                   gutterBottom
@@ -248,7 +249,7 @@ const MobileInfo: React.FC<InfoProps> = ({ info, tagList }) => {
     // filter [] () 【】 info
     const re = /(\([^()]*\))|(\[[^\[\]]*\])|(【[^【】]*】)/g
     const f_search = info.title.replace(re, '').trim()
-    router.push('/result?f_search=' + encodeURIComponent(f_search))
+    router.push(searchHref(f_search))
   }
 
   return (
@@ -263,7 +264,10 @@ const MobileInfo: React.FC<InfoProps> = ({ info, tagList }) => {
           >
             {info.title_jpn}
           </SelectTypography>
-          <Link color="inherit" href={`/?f_search=uploader:${info.uploader}`}>
+          <Link
+            color="inherit"
+            href={searchHref(uploaderTerm(info.uploader), '/')}
+          >
             <Typography gutterBottom variant="subtitle2" color="textSecondary">
               {info.uploader}
             </Typography>

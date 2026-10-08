@@ -3,14 +3,17 @@ import { useRouter } from 'next/router'
 import React from 'react'
 import Layout from '../src/components/Layout'
 import GalleryList from '@/components/GalleryList'
+import { readQueryString } from '@/utils/search'
 
 const IndexPage = () => {
   const router = useRouter()
-  const f_search = decodeURIComponent((router.query.f_search as string) || '')
+  const f_search = readQueryString(router.query.f_search)
 
   return (
     <Layout showAvatar showSearch>
-      <GalleryList key={f_search} mode="index" f_search={f_search} />
+      {router.isReady && (
+        <GalleryList key={f_search} mode="index" f_search={f_search} />
+      )}
     </Layout>
   )
 }

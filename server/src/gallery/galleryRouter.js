@@ -9,6 +9,7 @@ const {
 } = require('./galleryApi')
 const { upstreamCookieString } = require('../utils/cookies')
 const cache = require('../cache')
+const { pickListParams, listCacheKey } = require('./listParams')
 const {
   isAllowedImageUrl,
   isSiteUrl,
@@ -17,28 +18,16 @@ const {
 const router = express.Router()
 
 router.get('/', async (req, res) => {
-  const page = parseInt(req.query.page || 0)
-  const f_search = req.query.f_search || ''
-
-  const cacheKey =
-    `[g${req.cookies.ipb_member_id}]` +
-    JSON.stringify({
-      page,
-      f_search,
-      cookie: upstreamCookieString(req.cookies),
-    })
+  const params = pickListParams(req.query)
+  const cacheKey = listCacheKey('gallery', req.cookies.ipb_member_id, params)
 
   let content = cache.get(cacheKey)
   if (!content) {
-    content = await galleryList(
-      { page, f_search },
-      upstreamCookieString(req.cookies)
-    )
-
+    content = await galleryList(params, upstreamCookieString(req.cookies))
     cache.set(cacheKey, content, 180)
   }
 
-  res.json(content)
+  res.json({ error: false, ...content })
 })
 
 // thumbnail pages depend on the account's thumbnail setting: cache per user

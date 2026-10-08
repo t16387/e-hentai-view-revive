@@ -5,20 +5,24 @@ const { parseGalleryList } = require('../gallery/galleryParser')
 const { parseFavoritesSettingInfo } = require('./favoritesPaeser')
 const qs = require('qs')
 const { GalleryMode } = require('../constant')
-async function getFavorites({ page, favcat }, cookies) {
+async function getFavorites(params, cookies) {
   // the parser detects the display mode; no second request with inline_set
   const res = await axios.get(`${favoritesURL}`, {
-    params: { page, favcat },
+    params,
     headers: { Cookie: cookies },
   })
 
   const document = new JSDOM(res.data).window.document
 
   if (document.body.innerHTML.includes('No hits found')) {
-    return { list: [], total: 0 }
+    return { list: [], total: 0, next: null, prev: null }
   }
 
-  return parseGalleryList(document, GalleryMode.Favorites)
+  const { list, total, next, prev } = parseGalleryList(
+    document,
+    GalleryMode.Favorites
+  )
+  return { list, total, next, prev }
 }
 
 async function getFavoritesInfo(cookies) {

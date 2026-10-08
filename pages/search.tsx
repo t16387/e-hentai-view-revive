@@ -20,6 +20,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import { useTranslation } from 'next-i18next'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from 'next/router'
+import { parseGalleryUrl, searchHref } from '@/utils/search'
 import React, { useRef, useState } from 'react'
 
 const useStyles = makeStyles(() =>
@@ -66,16 +67,15 @@ const Search = () => {
   }
 
   const handleGoResult = (f_search: string) => {
-    try {
-      if (f_search.includes('exhentai.org/g/')) {
-        let res = f_search.split('/')
-        let gIndex = res.findIndex((v) => v === 'g')
-        let gid = res[gIndex + 1]
-        let token = res[gIndex + 2]
-        return router.replace('/[gid]/[token]', `/${gid}/${token}`)
-      }
-    } catch (error) {}
-    router.replace('/result?f_search=' + encodeURIComponent(f_search))
+    // a pasted gallery link opens the gallery directly
+    const gallery = parseGalleryUrl(f_search)
+    if (gallery) {
+      return router.replace(
+        '/[gid]/[token]',
+        `/${gallery.gid}/${gallery.token}`
+      )
+    }
+    router.replace(searchHref(f_search))
   }
 
   return (

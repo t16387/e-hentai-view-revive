@@ -61,35 +61,35 @@ async function gdata(gidlist, cookies) {
   return res
 }
 
-async function galleryList({ page, f_search }, cookies) {
-  const res = await axios.get(`${baseURL}`, {
+/**
+ * @param {Record<string,string>} params validated list params (listParams.js)
+ * @param {string} cookies
+ * @returns {Promise<{list: any[], total: number, totalText: string, next: string|null, prev: string|null}>}
+ */
+async function galleryList(params, cookies) {
+  // no inline_set: the parser detects the display mode itself
+  const res = await axios.get(`${baseURL}/`, {
     headers: {
       Cookie: cookies,
     },
-    // no inline_set: the parser detects the display mode itself
-    params: { page, f_search },
+    params,
   })
   const document = new JSDOM(res.data).window.document
-  let list = []
-  let total = 0
   if (document.body.innerHTML === '') {
     throw new Error('[sad panda] no login!')
   }
 
+  const empty = { list: [], total: 0, totalText: '', next: null, prev: null }
   if (document.body.innerHTML.includes('No hits found')) {
-    return { list: [], total: 0 }
+    return empty
   }
 
-  try {
-    const res = parseGalleryList(document, GalleryMode.FrontPage)
-    total = res.total
-    list = res.list
-    if (list.length === 0) throw new Error('parse faild')
-  } catch (error) {
-    console.error(error)
-  }
-
-  return { list, total }
+  const { list, total, totalText, next, prev } = parseGalleryList(
+    document,
+    GalleryMode.FrontPage
+  )
+  if (list.length === 0) console.error('[gallery] list page parsed 0 rows')
+  return { list, total, totalText, next, prev }
 }
 
 async function galleryDetail({ gid, token }, cookies) {

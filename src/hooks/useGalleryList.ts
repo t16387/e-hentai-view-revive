@@ -1,12 +1,13 @@
 import { axios } from '@/apis'
 import { GalleriesPage } from '@/interface/gallery'
+import { galleryListKey, GalleryListMode } from '@/utils/search'
 import { useEffect } from 'react'
 import { useSWRInfinite } from 'swr'
 import useInViewportWithDistance from './useInViewportWithDistance'
 
 export interface UseGalleryListOptions {
   f_search?: string
-  mode: 'index' | 'popular' | 'favorites' | 'watched'
+  mode: GalleryListMode
   favcat?: string
 }
 export default function useGalleryList<T extends HTMLElement = HTMLDivElement>(
@@ -14,36 +15,26 @@ export default function useGalleryList<T extends HTMLElement = HTMLDivElement>(
 ) {
   const { mode, f_search, favcat } = options
   const [inview, inviewRef] = useInViewportWithDistance<T>(600)
-  const { data, error, size, setSize } = useSWRInfinite<GalleriesPage['list']>(
-    (offset) => {
-      switch (mode) {
-        case 'index':
-          return `/api/gallery?page=${offset}&f_search=${f_search}`
-        case 'popular':
-          return '/api/popular'
-        case 'favorites':
-          return `/api/favorites?page=${offset || 0}&favcat=${favcat}`
-        case 'watched':
-          return `/api/watched?page=${offset || 0}`
-      }
-    },
+  // cursor pagination: each key is derived from the previous page's `next`
+  const { data, error, size, setSize } = useSWRInfinite<GalleriesPage>(
+    (pageIndex, previous: GalleriesPage | null) =>
+      galleryListKey(mode, { f_search, favcat }, pageIndex, previous),
     async (url: string) => {
       const res = await axios.get<GalleriesPage>(url)
       if (res.data.error) throw res.data.message
-      return res.data.list
+      return res.data
     }
   )
 
-  const dataSource = data ? data.flat(1) : []
+  const dataSource = data ? data.flatMap((page) => page.list) : []
   const isLoadingInitialData = !data && !error
   const isLoadingMore =
     isLoadingInitialData ||
     (size > 0 && data && typeof data[size - 1] === 'undefined')
   const isEmpty = !isLoadingInitialData && dataSource.length === 0
+  const lastPage = data ? data[data.length - 1] : undefined
   const isReachingEnd =
-    isEmpty ||
-    mode === 'popular' ||
-    (data && data[data.length - 1].length < (mode === 'favorites' ? 50 : 25))
+    isEmpty || mode === 'popular' || (!!lastPage && !lastPage.next)
   // const isRefreshing = isValidating && data && data.length === size
 
   useEffect(() => {

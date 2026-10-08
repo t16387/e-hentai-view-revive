@@ -5,11 +5,12 @@ import CloseIcon from '@mui/icons-material/Close'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from 'next/router'
 import React from 'react'
+import { readQueryString } from '@/utils/search'
 
 const Result = () => {
   const router = useRouter()
 
-  const f_search = decodeURIComponent(router.query.f_search as string)
+  const f_search = readQueryString(router.query.f_search)
 
   return (
     <Layout
@@ -26,7 +27,11 @@ const Result = () => {
         </>
       }
     >
-      <GalleryList key={f_search} mode="index" f_search={f_search} />
+      {/* wait for the query on statically optimised pages instead of
+          searching for "undefined" */}
+      {router.isReady && (
+        <GalleryList key={f_search} mode="index" f_search={f_search} />
+      )}
     </Layout>
   )
 }

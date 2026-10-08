@@ -112,6 +112,10 @@ export interface Detailpage {
 export interface GalleriesPage {
   list: IndexListItemPorps[]
   total: number
+  totalText?: string
+  /** cursor for the next page (gid, or gid-favtime on favorites) */
+  next?: string | null
+  prev?: string | null
   error: boolean
   message: string
 }

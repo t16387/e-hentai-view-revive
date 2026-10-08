@@ -6,18 +6,18 @@ const {
   updateFavorite,
 } = require('./favoritesApi')
 const cache = require('../cache')
+const { pickListParams, listCacheKey } = require('../gallery/listParams')
 const router = express.Router()
 
 router.get('/', async (req, res) => {
-  const page = req.query.page || 0
-  const favcat = req.query.favcat || 'all'
-  const cacheKey = `[g${req.cookies.ipb_member_id}] favorites ${page} ${favcat}`
+  const params = pickListParams(req.query, {
+    favcat: (v) => v === 'all' || /^\d$/.test(v),
+  })
+  if (!params.favcat) params.favcat = 'all'
+  const cacheKey = listCacheKey('favorites', req.cookies.ipb_member_id, params)
   let content = cache.get(cacheKey)
   if (!content) {
-    content = await getFavorites(
-      { page, favcat },
-      upstreamCookieString(req.cookies)
-    )
+    content = await getFavorites(params, upstreamCookieString(req.cookies))
     cache.set(cacheKey, content)
   }
   res.json({ error: false, ...content })

@@ -31,6 +31,7 @@ import dayjs from 'dayjs'
 import { omit } from 'lodash-es'
 import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
+import { searchHref, uploaderTerm } from '@/utils/search'
 import React from 'react'
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -222,7 +223,10 @@ const DesktopInfoCard: React.FC<{ record: IndexListItemPorps }> = ({
         label={record.category}
         size="small"
       />
-      <Link color="inherit" href={`/?f_search=uploader:${record.uploader}`}>
+      <Link
+        color="inherit"
+        href={searchHref(uploaderTerm(record.uploader), '/')}
+      >
         <Typography component="p" variant="body2" align="center" gutterBottom>
           {record.uploader}
         </Typography>

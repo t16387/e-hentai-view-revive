@@ -4,6 +4,7 @@ import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
 import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
+import { searchHref, tagTerm } from '@/utils/search'
 import React from 'react'
 const useStyles = makeStyles(() =>
   createStyles({
@@ -54,7 +55,7 @@ const TagList: React.FC<Pick<Detailpage, 'tagList'>> = ({ tagList }) => {
                         classes={{ label: classes.label }}
                         clickable
                         onClick={() => {
-                          router.push(`/result?f_search=${v.keyword}`)
+                          router.push(searchHref(tagTerm(o.namespace, v.name)))
                         }}
                       />
                     </Tooltip>
