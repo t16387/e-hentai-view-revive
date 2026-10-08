@@ -160,3 +160,28 @@ describe('vertical layout maths', () => {
     expect(offsets[r.end] - offsets[10]).toBeGreaterThanOrEqual(3000)
   })
 })
+
+describe('reader paging with 200 thumbnails per page', () => {
+  const perPage = 200
+  const total = 450
+  it('pagesToLoad around the 200 boundary and the partial last page', () => {
+    expect(pagesToLoad(0, perPage, total)).toEqual([0])
+    expect(pagesToLoad(195, perPage, total)).toEqual([0, 1])
+    expect(pagesToLoad(200, perPage, total)).toEqual([1])
+    expect(pagesToLoad(399, perPage, total)).toEqual([1, 2])
+    expect(pagesToLoad(449, perPage, total)).toEqual([2])
+    expect(pagesToLoad(10_000, perPage, total)).toEqual([2])
+  })
+  it('mergePage keeps absolute order whatever order pages arrive in', () => {
+    let list: ComicSlot[] = []
+    for (const p of [2, 0, 1]) list = mergePage(list, page(p, perPage, total), total)
+    expect(list).toHaveLength(total)
+    list.forEach((slot, i) => expect(slot?.index).toBe(i))
+  })
+  it('a start index on page 2 resolves and maps to the right page', () => {
+    const start = resolveStartIndex({ query: '401', total })
+    expect(start).toBe(401)
+    expect(pageOfIndex(start, perPage)).toBe(2)
+    expect(resolveStartIndex({ query: '9999', total })).toBe(total - 1)
+  })
+})
