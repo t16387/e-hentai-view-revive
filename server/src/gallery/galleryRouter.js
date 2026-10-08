@@ -8,7 +8,7 @@ const {
   galleryDetailPage,
   gallerytorrentsList,
 } = require('./galleryApi')
-const { upstreamCookieString } = require('../utils/cookies')
+const { upstreamCookieString, userCacheScope } = require('../utils/cookies')
 const cache = require('../cache')
 const { pickListParams, listCacheKey } = require('./listParams')
 const {
@@ -21,7 +21,7 @@ const router = express.Router()
 
 router.get('/', async (req, res) => {
   const params = pickListParams(req.query)
-  const cacheKey = listCacheKey('gallery', req.cookies.ipb_member_id, params)
+  const cacheKey = listCacheKey('gallery', userCacheScope(req.cookies), params)
 
   let content = cache.get(cacheKey)
   if (!content) {
@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
 
 // thumbnail pages depend on the account's thumbnail setting: cache per user
 const pageCacheKey = (req, gid, token, p) =>
-  `[g${req.cookies.ipb_member_id}]/${gid}/${token}/${p}`
+  `[g${userCacheScope(req.cookies)}]/${gid}/${token}/${p}`
 
 /** list + paging metadata of one thumbnail page */
 const pagePayload = (page) => ({
@@ -98,11 +98,13 @@ router.get('/loadImg', async (req, res) => {
   }
   // fetch exactly the URL that was checked
   const url = canonicalUrl(req.query.url)
-  let content = cache.get(url)
+  // the image page was fetched with this user's cookies: cache per user
+  const cacheKey = `[g${userCacheScope(req.cookies)}] img ${url}`
+  let content = cache.get(cacheKey)
   if (!content) {
     try {
       content = await loadImg(url, upstreamCookieString(req.cookies))
-      cache.set(url, content, 120)
+      cache.set(cacheKey, content, 120)
     } catch (error) {
       return res.json({ error: true, message: error.message })
     }

@@ -1,11 +1,11 @@
 const express = require('express')
-const { upstreamCookieString } = require('../utils/cookies')
+const { upstreamCookieString, userCacheScope } = require('../utils/cookies')
 const { getPopular } = require('./popluarApi')
 const cache = require('../cache')
 const router = express.Router()
 
 router.get('/', async (req, res) => {
-  const cacheKey = `[g${req.cookies.ipb_member_id}] popular`
+  const cacheKey = `[g${userCacheScope(req.cookies)}] popular`
   let content = cache.get(cacheKey)
   if (!content) {
     content = await getPopular(upstreamCookieString(req.cookies))

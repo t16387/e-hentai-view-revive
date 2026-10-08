@@ -1,5 +1,5 @@
 const express = require('express')
-const { upstreamCookieString } = require('../utils/cookies')
+const { upstreamCookieString, userCacheScope } = require('../utils/cookies')
 const {
   getFavorites,
   getFavoritesInfo,
@@ -14,7 +14,11 @@ router.get('/', async (req, res) => {
     favcat: (v) => v === 'all' || /^\d$/.test(v),
   })
   if (!params.favcat) params.favcat = 'all'
-  const cacheKey = listCacheKey('favorites', req.cookies.ipb_member_id, params)
+  const cacheKey = listCacheKey(
+    'favorites',
+    userCacheScope(req.cookies),
+    params
+  )
   let content = cache.get(cacheKey)
   if (!content) {
     content = await getFavorites(params, upstreamCookieString(req.cookies))

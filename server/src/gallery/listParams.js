@@ -47,9 +47,9 @@ function pickListParams(query = {}, extra = {}) {
   return out
 }
 
-/** stable cache key: member id + sorted params */
-function listCacheKey(scope, memberId, params) {
-  return `[g${memberId}] ${scope} ${JSON.stringify(params)}`
+/** stable cache key: user scope (userCacheScope) + sorted params */
+function listCacheKey(scope, user, params) {
+  return `[g${user}] ${scope} ${JSON.stringify(params)}`
 }
 
 module.exports = { pickListParams, listCacheKey, RULES }

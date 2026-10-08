@@ -1,6 +1,10 @@
 const express = require('express')
 const { login, validateLogin, getUserSetting } = require('./userApi')
-const { getCookieString, upstreamCookieString } = require('../utils/cookies')
+const {
+  getCookieString,
+  upstreamCookieString,
+  userCacheScope,
+} = require('../utils/cookies')
 const cache = require('../cache')
 const router = express.Router()
 
@@ -44,7 +48,7 @@ router.post('/setting', async (req, res) => {
   )
 
   cache.del(
-    cache.keys().filter((v) => v.includes(`[g${req.cookies.ipb_member_id}]`))
+    cache.keys().filter((v) => v.includes(`[g${userCacheScope(req.cookies)}]`))
   )
   res.send({ error: false, message: 'fresh setting success' })
 })

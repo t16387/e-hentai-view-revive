@@ -1,3 +1,4 @@
+const crypto = require('crypto')
 const Cookie = require('jsdom').toughCookie.Cookie
 function getCookieString(obj) {
   const arr = []
@@ -43,6 +44,25 @@ function upstreamCookieString(reqCookies = {}) {
   return getCookieString(picked)
 }
 
+/**
+ * Cache scope of the requesting user. The member id alone is a plain cookie
+ * anybody can set, so keying caches by it let one client read another
+ * user's cached favorites / watched / list pages. The scope is a hash of
+ * the login cookies instead (never logged, never sent anywhere).
+ */
+function userCacheScope(reqCookies) {
+  const c = reqCookies || {}
+  const parts = ['ipb_member_id', 'ipb_pass_hash', 'igneous'].map((k) =>
+    typeof c[k] === 'string' ? c[k] : ''
+  )
+  if (parts.every((v) => v === '')) return 'anon'
+  return crypto
+    .createHash('sha256')
+    .update(parts.join('\0'))
+    .digest('hex')
+    .slice(0, 32)
+}
+
 function parseCookieToJSON(arr = []) {
   const res = {}
   arr.forEach((cookieString) => {
@@ -56,5 +76,6 @@ module.exports = {
   getCookieString,
   upstreamCookieString,
   parseCookieToJSON,
+  userCacheScope,
   UPSTREAM_COOKIES,
 }
