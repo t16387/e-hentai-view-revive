@@ -1,0 +1,9 @@
+.git
+.github
+.husky
+.vscode
+.next
+node_modules
+coverage
+Dockerfile
+*.log

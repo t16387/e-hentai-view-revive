@@ -9,45 +9,42 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - uses: pnpm/action-setup@v4
 
-      - uses: actions/cache@v2
-        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+      - uses: actions/setup-node@v4
         with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
+          node-version: 22
+          cache: pnpm
 
-      - name: build
+      - name: Test and type-check
         run: |
-          yarn install
-          node scripts/buildTime.js
-          yarn build
-          rm -rf node_modules
-          yarn install --production
+          pnpm install --frozen-lockfile
+          pnpm test
+          pnpm type:check
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # The image is built inside the multi-stage Dockerfile, per platform.
+      # linux/arm/v7 was dropped: @next/swc 12 ships no musl armv7 binary.
       - name: Push to Docker Hub
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: |
             linux/amd64
             linux/arm64
-            linux/arm/v7
           tags: |
             ironkinoko/e-hentai-view:latest
