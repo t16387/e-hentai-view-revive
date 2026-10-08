@@ -1,16 +1,31 @@
 const Axios = require('axios').default
-const { HttpProxyAgent } = require('http-proxy-agent')
-const { HttpsProxyAgent } = require('https-proxy-agent')
+
+/**
+ * Optional outbound proxy for requests to e-hentai / exhentai.
+ * Off by default. Set EHV_PROXY=http://host:port to route all upstream
+ * traffic through an HTTP(S) proxy. (axios still honours the standard
+ * HTTP_PROXY / HTTPS_PROXY env vars on its own when EHV_PROXY is unset.)
+ */
+const proxyUrl = process.env.EHV_PROXY
+
+function proxyOptions() {
+  if (!proxyUrl) return {}
+  const { HttpProxyAgent } = require('http-proxy-agent')
+  const { HttpsProxyAgent } = require('https-proxy-agent')
+  return {
+    httpAgent: new HttpProxyAgent(proxyUrl),
+    httpsAgent: new HttpsProxyAgent(proxyUrl),
+    proxy: false,
+  }
+}
 
 const axios = Axios.create({
   headers: {
     'User-Agent':
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36',
-    withCredentials: true,
+      process.env.EHV_USER_AGENT ||
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
   },
   maxRedirects: 2,
-  httpAgent: new HttpProxyAgent('http://192.168.31.38:10809'),
-  httpsAgent: new HttpsProxyAgent('http://192.168.31.38:10809'),
-  proxy: false,
+  ...proxyOptions(),
 })
 module.exports = axios
