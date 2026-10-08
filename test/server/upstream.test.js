@@ -77,6 +77,11 @@ describe('image proxy allowlist', () => {
     expect(isSiteUrl('https://exhentai.org/s/aa/1-1')).toBe(true)
     expect(isSiteUrl('https://ehgt.org/x.jpg')).toBe(false)
     expect(isSiteUrl('https://a.b.hath.network/h/x')).toBe(false)
+    // the image proxy accepts http:// URLs, but cookies never go out in clear text
+    expect(isSiteUrl('http://exhentai.org/s/aa/1-1')).toBe(false)
+    expect(isSiteUrl('http://s.exhentai.org/t/x.jpg')).toBe(false)
+    expect(isSiteUrl('https://exhentai.org:8443/x')).toBe(false)
+    expect(isSiteUrl('https://exhentai.org:443/x')).toBe(true)
   })
 })
 

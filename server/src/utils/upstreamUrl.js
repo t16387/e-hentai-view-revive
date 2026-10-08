@@ -48,10 +48,19 @@ function isAllowedImageUrl(url) {
   return !!u && hostMatches(u.hostname, IMAGE_HOSTS)
 }
 
-/** true for a host that should receive the user's site cookies */
+/**
+ * true for a URL that should receive the user's site cookies: the site
+ * itself, over https, on the default port (never in clear text over http,
+ * never to some other service on a high port of the same host)
+ */
 function isSiteUrl(url) {
   const u = parse(url)
-  return !!u && hostMatches(u.hostname, SITE_HOSTS)
+  return (
+    !!u &&
+    u.protocol === 'https:' &&
+    u.port === '' &&
+    hostMatches(u.hostname, SITE_HOSTS)
+  )
 }
 
 /** true for an image page (/s/<imgkey>/<gid>-<n>) on e-hentai/exhentai */

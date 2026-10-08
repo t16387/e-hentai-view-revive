@@ -169,4 +169,14 @@ describe('/api/gallery/proxy', () => {
     expect(get).toHaveBeenCalledTimes(1)
     expect(res.statusCode).toBe(502)
   })
+
+  it('never sends cookies over plain http, even to the site', async () => {
+    const get = vi
+      .spyOn(axios, 'get')
+      .mockResolvedValue({ data: new PassThrough(), headers: {} })
+    const res = fakeRes()
+    await handler(fakeReq('http://exhentai.org/t/aa/bb/x.jpg'), res)
+    await flush()
+    expect(get.mock.calls[0][1].headers).toEqual({})
+  })
 })
