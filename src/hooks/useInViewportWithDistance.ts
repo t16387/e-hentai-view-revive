@@ -1,5 +1,4 @@
 import { useRef, useState, MutableRefObject, useEffect } from 'react'
-import 'intersection-observer'
 type Arg = HTMLElement | (() => HTMLElement) | null
 type InViewport = boolean | undefined
 

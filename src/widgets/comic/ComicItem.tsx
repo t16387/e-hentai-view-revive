@@ -5,7 +5,6 @@ import { DetailPageListItemProps } from '@/interface/gallery'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
-import 'intersection-observer'
 import React, { useEffect, useRef, useState } from 'react'
 import { mutate } from 'swr'
 import {
