@@ -179,4 +179,49 @@ describe('/api/gallery/proxy', () => {
     await flush()
     expect(get.mock.calls[0][1].headers).toEqual({})
   })
+
+  it('a client that disconnects before the image host answers cancels the request', async () => {
+    let resolve
+    const get = vi
+      .spyOn(axios, 'get')
+      .mockReturnValue(new Promise((r) => (resolve = r)))
+    const res = fakeRes()
+    await handler(fakeReq('https://abcd.efgh.hath.network/h/x/1.jpg'), res)
+    res.destroy() // browser gave up while the H@H node was still connecting
+    await flush()
+    const token = get.mock.calls[0][1].cancelToken
+    expect(token && token.reason).toBeTruthy()
+    const body = new PassThrough()
+    resolve({ status: 200, data: body, headers: {} })
+    await flush()
+    expect(body.destroyed).toBe(true)
+    expect(res.send).not.toHaveBeenCalled()
+  })
+
+  it('a client that disconnects mid-stream destroys the upstream stream', async () => {
+    const body = new PassThrough()
+    vi.spyOn(axios, 'get').mockResolvedValue({
+      status: 200,
+      data: body,
+      headers: { 'content-type': 'image/jpeg' },
+    })
+    const res = fakeRes()
+    await handler(fakeReq('https://abcd.efgh.hath.network/h/x/1.jpg'), res)
+    await flush()
+    body.write(Buffer.from('partial'))
+    res.destroy()
+    await flush()
+    expect(body.destroyed).toBe(true)
+  })
+
+  it('an upstream stream error mid-transfer closes the response', async () => {
+    const body = new PassThrough()
+    vi.spyOn(axios, 'get').mockResolvedValue({ data: body, headers: {} })
+    const res = fakeRes()
+    await handler(fakeReq('https://ehgt.org/x.jpg'), res)
+    await flush()
+    body.destroy(new Error('aborted'))
+    await flush()
+    expect(res.destroyed).toBe(true)
+  })
 })

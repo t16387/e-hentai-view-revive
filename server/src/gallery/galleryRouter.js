@@ -1,5 +1,6 @@
 const express = require('express')
 const axios = require('../axios')
+const { CancelToken, isCancel } = require('axios')
 const {
   galleryList,
   galleryDetail,
@@ -141,10 +142,11 @@ function redirectTarget(location, from) {
 }
 
 /** GET an image, following at most PROXY_MAX_REDIRECTS allowlisted redirects */
-async function fetchImage(url, req) {
+async function fetchImage(url, req, cancelToken) {
   let target = url
   for (let hop = 0; ; hop++) {
     const response = await axios.get(target, {
+      cancelToken,
       // site cookies go to the site only, never to third-party H@H hosts
       headers: isSiteUrl(target)
         ? { Cookie: upstreamCookieString(req.cookies) }
@@ -177,12 +179,20 @@ router.get('/proxy', async (req, res) => {
   // fetch exactly the URL that was checked
   const url = canonicalUrl(req.query.url)
   let upstream
-  req.on('close', () => {
-    if (upstream && !res.writableFinished) upstream.destroy()
+  let clientGone = false
+  const cancel = CancelToken.source()
+  // the browser went away (scrolled past, navigated): stop the upstream
+  // request, whether it is still connecting or already streaming
+  res.on('close', () => {
+    if (res.writableFinished) return
+    clientGone = true
+    cancel.cancel('client closed the connection')
+    if (upstream) upstream.destroy()
   })
-  fetchImage(url, req)
+  fetchImage(url, req, cancel.token)
     .then((response) => {
       upstream = response.data
+      if (clientGone) return upstream.destroy()
       PROXY_HEADERS.forEach((key) => {
         if (response.headers[key]) res.setHeader(key, response.headers[key])
       })
@@ -191,6 +201,7 @@ router.get('/proxy', async (req, res) => {
       upstream.pipe(res)
     })
     .catch((err) => {
+      if (clientGone || isCancel(err)) return
       if (res.headersSent) return res.destroy()
       const timedOut = err && err.code === 'ECONNABORTED'
       res
