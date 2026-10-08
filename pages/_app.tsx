@@ -68,7 +68,16 @@ function MyApp(props: AppProps) {
 
               gtag('config', 'UA-177345758-1');`}
       </Script>
-      <SWRConfig value={{ errorRetryInterval: 1000, errorRetryCount: 1 }}>
+      <SWRConfig
+        value={{
+          errorRetryInterval: 1000,
+          errorRetryCount: 1,
+          // gallery data does not change while the tab is in the background:
+          // revalidating every key on each focus multiplied upstream requests
+          revalidateOnFocus: false,
+          dedupingInterval: 5000,
+        }}
+      >
         <ComicConfig>
           <StyledEngineProvider injectFirst>
             <ThemeProvider>
