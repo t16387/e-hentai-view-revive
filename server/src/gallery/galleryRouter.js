@@ -45,8 +45,19 @@ const pagePayload = (page) => ({
   page: page.page,
 })
 
+/**
+ * gid / token as they appear in gallery URLs. Express decodes %2F in
+ * params, so without this check '/api/gallery/..%2F..%2Fuconfig.php/x'
+ * made the server GET other paths of the site with the user's cookies.
+ */
+const isGalleryRef = (gid, token) =>
+  /^\d{1,12}$/.test(gid) && /^[0-9a-f]{1,40}$/.test(token)
+const badRequest = (res) =>
+  res.status(400).json({ error: true, message: 'bad request' })
+
 router.get('/:gid/:token', async (req, res) => {
   const { gid, token } = req.params
+  if (!isGalleryRef(gid, token)) return badRequest(res)
 
   const content = await galleryDetail(
     { gid, token },
@@ -61,6 +72,7 @@ router.get('/:gid/:token', async (req, res) => {
 })
 router.get('/:gid/:token/torrent', async (req, res) => {
   const { gid, token } = req.params
+  if (!isGalleryRef(gid, token)) return badRequest(res)
 
   const content = await gallerytorrentsList(
     { gid, token },
@@ -72,8 +84,8 @@ router.get('/:gid/:token/torrent', async (req, res) => {
 router.get('/:gid/:token/:p', async (req, res) => {
   const { gid, token } = req.params
   const p = parseInt(req.params.p, 10)
-  if (!/^\d+$/.test(gid) || !/^[0-9a-f]+$/.test(token) || !(p >= 0)) {
-    return res.status(400).json({ error: true, message: 'bad request' })
+  if (!isGalleryRef(gid, token) || !/^\d{1,5}$/.test(req.params.p)) {
+    return badRequest(res)
   }
   const cacheKey = pageCacheKey(req, gid, token, p)
 
