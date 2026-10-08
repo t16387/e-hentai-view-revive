@@ -19,7 +19,11 @@ export const axios = Axios.create({})
 
 axios.interceptors.response.use((res) => {
   // count--
-  if (res.data.error && res.data.message?.includes('No login')) {
+  // not logged in, or exhentai rejected the cookies (sad panda)
+  if (
+    res.data.error &&
+    (res.data.message?.includes('No login') || res.data.code === 'sad panda')
+  ) {
     Router.replace('/signin')
   }
   return res

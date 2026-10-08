@@ -1,33 +1,22 @@
 const axios = require('../axios')
-const { favoritesURL, favoritesApiURL } = require('../config/api')
-const JSDOM = require('jsdom').JSDOM
-const { parseGalleryList } = require('../gallery/galleryParser')
+const { favoritesURL, favoritesApiURL, siteName } = require('../config/api')
+const { fetchPage } = require('../utils/fetchPage')
+const { listFromDocument } = require('../gallery/listPage')
 const { parseFavoritesSettingInfo } = require('./favoritesPaeser')
 const qs = require('qs')
 const { GalleryMode } = require('../constant')
 async function getFavorites(params, cookies) {
   // the parser detects the display mode; no second request with inline_set
-  const res = await axios.get(`${favoritesURL}`, {
+  const { document } = await fetchPage(favoritesURL, {
+    cookies,
     params,
-    headers: { Cookie: cookies },
+    siteName,
   })
-
-  const document = new JSDOM(res.data).window.document
-
-  if (document.body.innerHTML.includes('No hits found')) {
-    return { list: [], total: 0, next: null, prev: null }
-  }
-
-  const { list, total, next, prev } = parseGalleryList(
-    document,
-    GalleryMode.Favorites
-  )
-  return { list, total, next, prev }
+  return listFromDocument(document, GalleryMode.Favorites)
 }
 
 async function getFavoritesInfo(cookies) {
-  const res = await axios.get(favoritesURL, { headers: { Cookie: cookies } })
-  const document = new JSDOM(res.data).window.document
+  const { document } = await fetchPage(favoritesURL, { cookies, siteName })
   return await parseFavoritesSettingInfo(document)
 }
 

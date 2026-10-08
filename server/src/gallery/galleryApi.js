@@ -1,7 +1,6 @@
 const axios = require('../axios')
 const { baseApiURL, baseURL, gallerytorrentsURL } = require('../config/api')
 const {
-  parseGalleryList,
   // parseHTMLAnchorElement,
   parseDetailPageCommentList,
   parseDetailPageList,
@@ -11,12 +10,14 @@ const {
   parseTorrentList,
   isContentWarning,
 } = require('./galleryParser')
-const JSDOM = require('jsdom').JSDOM
 const dayjs = require('dayjs')
 const filesize = require('filesize')
 const translated = require('../utils/translated')
 const { chunk } = require('lodash')
 const { GalleryMode } = require('../constant')
+const { fetchPage } = require('../utils/fetchPage')
+const { siteName } = require('../config/api')
+const { listFromDocument } = require('./listPage')
 async function gdata(gidlist, cookies) {
   if (gidlist.length === 0) return []
   const taskList = []
@@ -68,28 +69,12 @@ async function gdata(gidlist, cookies) {
  */
 async function galleryList(params, cookies) {
   // no inline_set: the parser detects the display mode itself
-  const res = await axios.get(`${baseURL}/`, {
-    headers: {
-      Cookie: cookies,
-    },
+  const { document } = await fetchPage(`${baseURL}/`, {
+    cookies,
     params,
+    siteName,
   })
-  const document = new JSDOM(res.data).window.document
-  if (document.body.innerHTML === '') {
-    throw new Error('[sad panda] no login!')
-  }
-
-  const empty = { list: [], total: 0, totalText: '', next: null, prev: null }
-  if (document.body.innerHTML.includes('No hits found')) {
-    return empty
-  }
-
-  const { list, total, totalText, next, prev } = parseGalleryList(
-    document,
-    GalleryMode.FrontPage
-  )
-  if (list.length === 0) console.error('[gallery] list page parsed 0 rows')
-  return { list, total, totalText, next, prev }
+  return listFromDocument(document, GalleryMode.FrontPage)
 }
 
 async function galleryDetail({ gid, token }, cookies) {
@@ -100,28 +85,26 @@ async function galleryDetail({ gid, token }, cookies) {
 
   // no inline_set=ts_l: thumbnails-per-page is read from the page, and every
   // ?p=N request then uses the same account setting as page 0
-  const res = await axios.get(`${baseURL}/g/${gid}/${token}/`, {
-    headers: { Cookie: cookies },
+  const { document, html } = await fetchPage(`${baseURL}/g/${gid}/${token}/`, {
+    cookies,
+    siteName,
   })
-  const document = new JSDOM(res.data).window.document
-  if (document.body.textContent === 'Key missing, or incorrect key provided.')
-    throw new Error('[404]Key missing, or incorrect key provided.')
   if (isContentWarning(document))
     throw new Error('[warning] content warning page was not skipped')
   list = parseDetailPageList(document)
   commentList = parseDetailPageCommentList(document)
   tagList = parseDetailPageTagList(document)
-  info = parseDetailPageInfo(document, res.data)
+  info = parseDetailPageInfo(document, html)
   // tagList = translated(tagList)
 
   return { list, commentList, tagList, info }
 }
 async function galleryDetailPage({ gid, token, p }, cookies) {
-  const res = await axios.get(`${baseURL}/g/${gid}/${token}/`, {
+  const { document } = await fetchPage(`${baseURL}/g/${gid}/${token}/`, {
+    cookies,
     params: { p },
-    headers: { Cookie: cookies },
+    siteName,
   })
-  const document = new JSDOM(res.data).window.document
   if (isContentWarning(document))
     throw new Error('[warning] content warning page was not skipped')
   return parseDetailPageList(document)
@@ -130,12 +113,11 @@ async function loadImg(url, cookies) {
   let count = 0
   async function load() {
     try {
-      const res = await axios.get(url, { headers: { Cookie: cookies } })
-      const document = new JSDOM(res.data).window.document
+      const { document } = await fetchPage(url, { cookies, siteName })
       return parseBigImg(document)
     } catch (error) {
-      // quota / layout errors will not fix themselves: fail fast
-      if (/^\[(509|image)\]/.test(error.message)) throw error
+      // quota / login / layout errors will not fix themselves: fail fast
+      if (error.code || /^\[(509|image)\]/.test(error.message)) throw error
       if (count++ >= 2) throw error
       await new Promise((r) => setTimeout(r, 300 * count))
       return await load()
@@ -145,10 +127,11 @@ async function loadImg(url, cookies) {
 }
 
 async function gallerytorrentsList({ gid, token }, cookies) {
-  const res = await axios.get(`${gallerytorrentsURL}?gid=${gid}&t=${token}`, {
-    headers: { Cookie: cookies },
+  const { document } = await fetchPage(gallerytorrentsURL, {
+    cookies,
+    params: { gid, t: token },
+    siteName,
   })
-  const document = new JSDOM(res.data).window.document
 
   return parseTorrentList(document)
 }
