@@ -42,12 +42,16 @@ app.use('/api/watched', require('./watched/watchedRouter'))
 app.use('/api/favorites', require('./favorites/favoritesRouter'))
 app.use('/api/user', require('./user/userRouter'))
 
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error(err)
-  if (err.message === 'Request failed with status code 302') {
-    err.message = 'no login'
+  // Log only the message: a raw axios error carries the request config,
+  // including the user's Cookie header, and must never reach the logs.
+  console.error('[api] %s %s -> %s', req.method, req.path, err && err.message)
+  let message = (err && err.message) || 'error'
+  if (message === 'Request failed with status code 302') {
+    message = 'no login'
   }
-  res.status(200).send({ error: true, message: err.message })
+  res.status(200).send({ error: true, code: err && err.code, message })
 })
 
 const PORT = process.env.PORT || 8080
