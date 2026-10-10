@@ -11,7 +11,8 @@ const nextConfig = {
 
   env: {
     VERSION: pkg.version,
-    BUILDTIME: pkg.buildTime,
+    // empty package.json buildTime yields Invalid Date on /about; stamp at build
+    BUILDTIME: pkg.buildTime || new Date().toISOString(),
   },
 }
 

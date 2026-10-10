@@ -54,9 +54,11 @@ const About = () => {
         <ListItem>
           <ListItemText
             primary={t('About.Version')}
-            secondary={`${process.env.VERSION}(${dayjs(
-              process.env.BUILDTIME
-            ).format()})`}
+            secondary={`${process.env.VERSION}(${
+              process.env.BUILDTIME && dayjs(process.env.BUILDTIME).isValid()
+                ? dayjs(process.env.BUILDTIME).format()
+                : 'dev'
+            })`}
             secondaryTypographyProps={{
               component: Link,
               href: 'https://github.com/IronKinoko/e-hentai-view/releases',
