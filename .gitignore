@@ -34,3 +34,8 @@ yarn-error.log*
 .env.production.local
 
 tsconfig.tsbuildinfo
+
+# local compose env (never commit)
+.env
+.env.*
+!.env.example

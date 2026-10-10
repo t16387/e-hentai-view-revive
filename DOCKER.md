@@ -50,3 +50,9 @@ If upstream is blocked on your network, set `EHV_PROXY` to your local proxy. On 
 - `.dockerignore` excludes `.git`, `node_modules`, `.next`, and `.env*` so secrets are not copied into the build context.
 
 Rebuild after code changes: `docker compose up --build`.
+
+## Verified on the lab box (2026-10-10 HKT)
+
+`docker compose up --build` produced image `ehentai-view:revive`, container healthy on `0.0.0.0:3000->8080`.
+`GET /` and `GET /search` returned HTTP 200; logs showed `site: e-hentai`. No cookie env vars inside the container.
+Upstream `GET /api/gallery` from the container hit intermittent `getaddrinfo EAI_AGAIN` (host DNS); that is environmental, not a Compose misconfig.
