@@ -123,5 +123,13 @@
   "List.Go": "Go",
   "List.JumpTooFar": "Jump is limited to 50 pages ahead (site uses cursors, not page numbers).",
   "List.JumpEnd": "Reached the last available page.",
-  "List.JumpInvalid": "Enter a page number of 1 or greater."
+  "List.JumpInvalid": "Enter a page number of 1 or greater.",
+  "History.DoNotStore": "ไม่บันทึกประวัติ",
+  "History.DoNotStore.Hint": "เมื่อเปิด จะไม่เขียนประวัติการเรียกดูหรือตำแหน่งการอ่าน รายการเดิมยังอยู่จนกว่าจะลบ",
+  "Tag.SearchSelected": "ค้นหาแท็กที่เลือก",
+  "Tag.ClearSelected": "ล้างการเลือก",
+  "Tag.SelectedCount": "เลือก {{count}} รายการ",
+  "Search.Filters": "ตัวกรอง",
+  "Search.AdvancedSheet": "ตัวกรองขั้นสูง",
+  "Search.Categories": "หมวดหมู่"
 }

@@ -17,3 +17,6 @@ export const languageMap: Record<string, string> = {
   kr: '한국어',
   ms: 'Bahasa Melayu',
 }
+
+/** When 'true', do not write browse/read history (localStorage). */
+export const LOCAL_DO_NOT_STORE_HISTORY = 'doNotStoreHistory'

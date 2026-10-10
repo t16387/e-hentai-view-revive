@@ -123,5 +123,13 @@
   "List.Go": "이동",
   "List.JumpTooFar": "한 번에 앞으로 최대 50쪽까지 이동할 수 있습니다(사이트는 페이지 번호가 아닌 커서를 사용).",
   "List.JumpEnd": "마지막 페이지입니다.",
-  "List.JumpInvalid": "1 이상의 페이지 번호를 입력하세요."
+  "List.JumpInvalid": "1 이상의 페이지 번호를 입력하세요.",
+  "History.DoNotStore": "기록 저장 안 함",
+  "History.DoNotStore.Hint": "켜면 갤러리 열람·읽기 위치를 기록하지 않습니다. 기존 기록은 삭제할 때까지 유지됩니다.",
+  "Tag.SearchSelected": "선택한 태그 검색",
+  "Tag.ClearSelected": "선택 해제",
+  "Tag.SelectedCount": "{{count}}개 선택",
+  "Search.Filters": "필터",
+  "Search.AdvancedSheet": "고급 필터",
+  "Search.Categories": "카테고리"
 }

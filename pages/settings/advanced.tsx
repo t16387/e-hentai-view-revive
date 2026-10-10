@@ -2,6 +2,7 @@ import Layout from '@/components/Layout'
 import Language from '@/widgets/setting/Language'
 import TagShow from '@/widgets/setting/TagShow'
 import ThemeMode from '@/widgets/setting/ThemeMode'
+import DoNotStoreHistory from '@/widgets/setting/DoNotStoreHistory'
 import { useIsmobile } from '@/theme'
 import { List } from '@mui/material'
 import { NextPage } from 'next'
@@ -23,6 +24,7 @@ const Advanced: NextPage = () => {
         <Language />
         <ThemeMode />
         <TagShow />
+        <DoNotStoreHistory />
       </List>
     </Layout>
   )

@@ -123,5 +123,13 @@
   "List.Go": "跳转",
   "List.JumpTooFar": "一次最多向前跳 50 页（站点使用游标分页，不是页码）。",
   "List.JumpEnd": "已到最后一页。",
-  "List.JumpInvalid": "请输入 ≥ 1 的页码。"
+  "List.JumpInvalid": "请输入 ≥ 1 的页码。",
+  "History.DoNotStore": "不保存历史记录",
+  "History.DoNotStore.Hint": "开启后，浏览图库与阅读页码不会写入历史或阅读进度。已有记录会保留，直到你手动清除。",
+  "Tag.SearchSelected": "搜索已选标签",
+  "Tag.ClearSelected": "清除选择",
+  "Tag.SelectedCount": "已选 {{count}} 个",
+  "Search.Filters": "筛选",
+  "Search.AdvancedSheet": "高级筛选",
+  "Search.Categories": "分类"
 }

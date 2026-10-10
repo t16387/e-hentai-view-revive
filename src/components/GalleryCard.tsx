@@ -2,6 +2,7 @@ import ColorChip from '@/components/ColorChip'
 import Link from '@/components/Link'
 import LoadMedia from '@/components/LoadMedia'
 import { LOCAL_HISTORY } from '@/constant'
+import { readDoNotStoreHistory } from '@/utils/historyPrefs'
 import useGalleryConfig from '@/hooks/useGalleryConfig'
 import useInViewportWithDistance from '@/hooks/useInViewportWithDistance'
 import { IndexListItemPorps } from '@/interface/gallery'
@@ -24,6 +25,7 @@ import { useRouter } from 'next/router'
 import React from 'react'
 import RatingInview from './RatingInview'
 function storageHistory(record: IndexListItemPorps) {
+  if (readDoNotStoreHistory()) return
   const his = JSON.parse(
     localStorage.getItem(LOCAL_HISTORY) || '[]'
   ) as IndexListItemPorps[]

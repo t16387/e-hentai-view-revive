@@ -6,6 +6,7 @@ import {
 } from '@/widgets/comic/utils'
 import { useEffect, useRef } from 'react'
 import { cache, mutate } from 'swr'
+import { readDoNotStoreHistory } from '@/utils/historyPrefs'
 import useComicReadPageHistory from './useComicReadPageHistory'
 import useEventManager from './useEventListenerEnhance'
 import useSharedState from './useSharedState'
@@ -99,6 +100,7 @@ export default function useComicData(
   const ready = data?.ready
   useEffect(() => {
     if (onlyInitData || !ready) return
+    if (readDoNotStoreHistory()) return
     if (typeof current === 'number') {
       setComicReadPageHistory((t) => {
         if (current === 0) delete t[comicPagesKey]
