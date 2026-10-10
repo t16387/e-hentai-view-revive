@@ -2,6 +2,7 @@ const { uniq } = require('lodash')
 const dayjs = require('dayjs')
 const { GalleryMode } = require('../constant')
 const { baseURL } = require('../config/api')
+const { sanitizeCommentHtml } = require('../utils/sanitizeHtml')
 
 /**
  * Parse the "Found about 12,345 results." banner (div.searchtext).
@@ -342,7 +343,7 @@ function parseDetailPageCommentList(document) {
     res.userName = name
     res.score = c5 ? c5.textContent : ''
 
-    res.comment = c6.innerHTML
+    res.comment = sanitizeCommentHtml(c6.innerHTML)
     return res
   })
 }

@@ -23,6 +23,7 @@ import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
 import React, { forwardRef, useEffect } from 'react'
 import { parseGalleryUrl } from '@/utils/search'
+import { sanitizeCommentHtml } from '@/utils/sanitizeCommentHtml'
 
 const useStyles = makeStyles(() =>
   createStyles({
@@ -94,7 +95,9 @@ const CommentListContent = forwardRef<HTMLUListElement, CommentListProps>(
                       [classes.hidden]: hidden,
                     })}
                     dangerouslySetInnerHTML={{
-                      __html: `${o.comment}<span> ${o.score}</span>`,
+                      __html: sanitizeCommentHtml(
+                        `${o.comment}<span> ${o.score}</span>`
+                      ),
                     }}
                   />
                 }
