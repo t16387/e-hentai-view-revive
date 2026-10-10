@@ -1,6 +1,7 @@
 import useGalleryList, { UseGalleryListOptions } from '@/hooks/useGalleryList'
 import GalleryCard, { LoadingCard } from '@/components/GalleryCard'
-import { Box, Button, Grid, Typography } from '@mui/material'
+import ListPagination from '@/components/ListPagination'
+import { Box, Grid, Typography } from '@mui/material'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
 import { useTranslation } from 'next-i18next'
@@ -36,8 +37,23 @@ const GalleryList: React.FC<GalleryListProps> = (props) => {
   const classes = useStyles()
   const [t] = useTranslation()
 
-  const { dataSource, inviewRef, isEmpty, isLoadingMore, isReachingEnd } =
-    useGalleryList<HTMLButtonElement>(props)
+  const {
+    dataSource,
+    isEmpty,
+    isLoadingMore,
+    isLoadingInitialData,
+    canPaginate,
+    page,
+    estimatedPages,
+    totalText,
+    hasPrev,
+    hasNext,
+    goPrev,
+    goNext,
+    goToPage,
+    jumping,
+    jumpError,
+  } = useGalleryList(props)
 
   if (isEmpty)
     return (
@@ -48,8 +64,25 @@ const GalleryList: React.FC<GalleryListProps> = (props) => {
       </Box>
     )
 
+  const showLoading =
+    isLoadingInitialData || (isLoadingMore && dataSource.length === 0)
+
   return (
     <>
+      {canPaginate && !isLoadingInitialData && (
+        <ListPagination
+          page={page}
+          estimatedPages={estimatedPages}
+          totalText={totalText}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          disabled={jumping || isLoadingMore}
+          jumpError={jumpError}
+          onPrev={goPrev}
+          onNext={goNext}
+          onJump={goToPage}
+        />
+      )}
       <Grid
         container
         wrap="wrap"
@@ -57,24 +90,34 @@ const GalleryList: React.FC<GalleryListProps> = (props) => {
         className={classes.container}
         spacing={2}
       >
-        {dataSource.map((o, i) => (
-          <Grid item xs key={o.gid} data-index={i}>
-            <GalleryCard record={o} />
-          </Grid>
-        ))}
+        {showLoading
+          ? Array(25)
+              .fill(0)
+              .map((_, k) => <LoadingCard key={k} />)
+          : dataSource.map((o, i) => (
+              <Grid item xs key={o.gid} data-index={i}>
+                <GalleryCard record={o} />
+              </Grid>
+            ))}
         {isLoadingMore &&
-          Array(25)
+          dataSource.length > 0 &&
+          Array(8)
             .fill(0)
-            .map((_, k) => <LoadingCard key={k} />)}
+            .map((_, k) => <LoadingCard key={`more-${k}`} />)}
       </Grid>
-      {!isEmpty && (
-        <Button ref={inviewRef} fullWidth className={classes.btn}>
-          {isReachingEnd
-            ? t('ReachEnd')
-            : isLoadingMore
-            ? t('Loading') + '...'
-            : t('More')}
-        </Button>
+      {canPaginate && !isLoadingInitialData && !isEmpty && (
+        <ListPagination
+          page={page}
+          estimatedPages={estimatedPages}
+          totalText={totalText}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          disabled={jumping || isLoadingMore}
+          jumpError={jumpError}
+          onPrev={goPrev}
+          onNext={goNext}
+          onJump={goToPage}
+        />
       )}
     </>
   )
