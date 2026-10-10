@@ -58,20 +58,27 @@ const Read: NextPage = () => {
     setReady(true)
   }, [router.isReady, queryCurrent, total, comicPagesKey, history])
 
-  // keep ?current= in the address bar in sync (shallow: no data refetch)
+  // History policy (UAT): entering the reader is one router.push from the
+  // gallery, so Browser Back returns there in a single step. The page
+  // counter only updates the URL via history.replaceState (not
+  // router.push / router.replace), so flipping pages never stacks entries
+  // that Back would have to walk through.
   const current = data?.current ?? 0
   useEffect(() => {
-    if (!ready) return
+    if (!ready || typeof window === 'undefined') return
     const id = setTimeout(() => {
-      if (router.query.current === String(current)) return
-      router.replace(
-        `/[gid]/[token]/read?current=${current}`,
-        `${comicUrl}/read?current=${current}`,
-        { shallow: true, scroll: false }
+      const qs = `?current=${current}`
+      if (window.location.search === qs) return
+      const as = `${comicUrl}/read${qs}`
+      const url = `/[gid]/[token]/read${qs}`
+      window.history.replaceState(
+        { ...window.history.state, as, url },
+        '',
+        window.location.pathname + qs
       )
     }, 400)
     return () => clearTimeout(id)
-  }, [ready, current, comicUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ready, current, comicUrl])
 
   if (!data || data.total === 0 || !ready) {
     return (
