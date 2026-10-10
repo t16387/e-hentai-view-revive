@@ -1,7 +1,21 @@
+import AdvancedSearch from '@/components/search/AdvancedSearch'
+import CategoryChips from '@/components/search/CategoryChips'
 import { LOCAL_SEARCH_HISTORY } from '@/constant'
 import useEnhanceLocalStorageState from '@/hooks/useEnhanceLocalStorageState'
 import {
+  CAT_ALL,
+  SearchFilters,
+  catsToHideMask,
+  hideMaskToIncluded,
+  parseGalleryUrl,
+  readSearchFilters,
+  searchHref,
+} from '@/utils/search'
+import {
   AppBar,
+  Box,
+  Button,
+  Container,
   IconButton,
   InputBase,
   List,
@@ -20,17 +34,11 @@ import HistoryIcon from '@mui/icons-material/History'
 import { useTranslation } from 'next-i18next'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from 'next/router'
-import { parseGalleryUrl, searchHref } from '@/utils/search'
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
-const useStyles = makeStyles(() =>
+const useStyles = makeStyles((theme) =>
   createStyles({
-    root: {
-      display: 'flex',
-    },
-    formroot: {
-      flex: 1,
-    },
+    formroot: { flex: 1 },
     input: {
       fontSize: '1.25rem',
       width: '100%',
@@ -38,44 +46,73 @@ const useStyles = makeStyles(() =>
         '-webkit-appearance': 'none',
       },
     },
-    inputEndIcon: {
-      fontSize: 24,
-      color: 'inherit',
+    inputEndIcon: { fontSize: 24, color: 'inherit' },
+    body: { paddingTop: theme.spacing(1), paddingBottom: theme.spacing(2) },
+    actions: {
+      display: 'flex',
+      gap: theme.spacing(1),
+      marginTop: theme.spacing(1),
+      marginBottom: theme.spacing(2),
     },
   })
 )
+
+const emptyFilters = (): SearchFilters => ({})
 
 const Search = () => {
   const [t] = useTranslation()
   const classes = useStyles()
   const router = useRouter()
   const ref = useRef<HTMLInputElement>(null)
-  const [query, setQuery] = useState('')
+  const [filters, setFilters] = useState<SearchFilters>(emptyFilters)
+  const [included, setIncluded] = useState(CAT_ALL)
   const [searchHistories, setSearchHistories] = useEnhanceLocalStorageState<
     string[]
   >(LOCAL_SEARCH_HISTORY, [])
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (query.length === 0) return
+  useEffect(() => {
+    if (!router.isReady) return
+    const f = readSearchFilters(router.query)
+    setFilters(f)
+    setIncluded(hideMaskToIncluded(f.f_cats ?? 0))
+  }, [router.isReady, router.query])
 
-    setSearchHistories(
-      [query, ...searchHistories.filter((v) => v !== query)].slice(0, 50)
-    )
-
-    handleGoResult(query)
+  const currentFilters = (): SearchFilters => {
+    const hide = catsToHideMask(included)
+    return {
+      ...filters,
+      f_cats: hide || undefined,
+    }
   }
 
-  const handleGoResult = (f_search: string) => {
-    // a pasted gallery link opens the gallery directly
-    const gallery = parseGalleryUrl(f_search)
-    if (gallery) {
-      return router.replace(
-        '/[gid]/[token]',
-        `/${gallery.gid}/${gallery.token}`
+  const handleGoResult = (next: SearchFilters) => {
+    const q = (next.f_search || '').trim()
+    if (q) {
+      const gallery = parseGalleryUrl(q)
+      if (gallery) {
+        return router.replace(
+          '/[gid]/[token]',
+          `/${gallery.gid}/${gallery.token}`
+        )
+      }
+      setSearchHistories(
+        [q, ...searchHistories.filter((v) => v !== q)].slice(0, 50)
       )
     }
-    router.replace(searchHref(f_search))
+    router.replace(searchHref(next))
+  }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const next = currentFilters()
+    // allow category/advanced-only browse (empty query), like the site
+    handleGoResult(next)
+  }
+
+  const handleClear = () => {
+    setFilters(emptyFilters())
+    setIncluded(CAT_ALL)
+    ref.current?.focus()
   }
 
   return (
@@ -86,34 +123,35 @@ const Search = () => {
             <ArrowBackIcon />
           </IconButton>
           <form
-            action="/"
+            action="/result"
             onSubmit={handleSubmit}
             method="GET"
             className={classes.formroot}
           >
             <InputBase
               placeholder={t('Search')}
-              value={query}
+              value={filters.f_search || ''}
               name="f_search"
               autoFocus
               inputProps={{
                 maxLength: 2000,
-                minLength: 3,
                 autoCorrect: 'off',
                 autoCapitalize: 'off',
                 spellCheck: false,
               }}
               inputRef={ref}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, f_search: e.target.value }))
+              }
               className={classes.input}
               type="search"
             />
           </form>
-          <Zoom in={query.length > 0}>
+          <Zoom in={!!(filters.f_search && filters.f_search.length > 0)}>
             <IconButton
               edge="end"
               onClick={() => {
-                setQuery('')
+                setFilters((f) => ({ ...f, f_search: '' }))
                 ref.current?.focus()
               }}
               className={classes.inputEndIcon}
@@ -125,28 +163,50 @@ const Search = () => {
         </Toolbar>
       </AppBar>
       <Toolbar />
-      <List>
-        {searchHistories.map((o, k) => (
-          <ListItem button key={k} onClick={() => handleGoResult(o)}>
-            <ListItemIcon>
-              <HistoryIcon />
-            </ListItemIcon>
-            <ListItemText primary={o} />
-            <ListItemSecondaryAction>
-              <IconButton
-                edge="end"
-                onClick={() => {
-                  searchHistories.splice(k, 1)
-                  setSearchHistories([...searchHistories])
-                }}
-                size="large"
-              >
-                <CloseIcon />
-              </IconButton>
-            </ListItemSecondaryAction>
-          </ListItem>
-        ))}
-      </List>
+      <Container maxWidth="sm" className={classes.body}>
+        <CategoryChips included={included} onChange={setIncluded} />
+        <AdvancedSearch value={filters} onChange={setFilters} />
+        <Box className={classes.actions}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleGoResult(currentFilters())}
+          >
+            {t('Search.Apply')}
+          </Button>
+          <Button variant="outlined" onClick={handleClear}>
+            {t('Search.Clear')}
+          </Button>
+        </Box>
+        <List>
+          {searchHistories.map((o, k) => (
+            <ListItem
+              button
+              key={k}
+              onClick={() =>
+                handleGoResult({ ...currentFilters(), f_search: o })
+              }
+            >
+              <ListItemIcon>
+                <HistoryIcon />
+              </ListItemIcon>
+              <ListItemText primary={o} />
+              <ListItemSecondaryAction>
+                <IconButton
+                  edge="end"
+                  onClick={() => {
+                    searchHistories.splice(k, 1)
+                    setSearchHistories([...searchHistories])
+                  }}
+                  size="large"
+                >
+                  <CloseIcon />
+                </IconButton>
+              </ListItemSecondaryAction>
+            </ListItem>
+          ))}
+        </List>
+      </Container>
     </>
   )
 }
