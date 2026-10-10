@@ -9,6 +9,6 @@ coverage
 .env
 .env.*
 !.env.example
+# secrets only — do not exclude server/src/utils/cookies.js
 **/ehv-exh.env
-**/*cookie*
-**/*secret*
+**/.secrets
