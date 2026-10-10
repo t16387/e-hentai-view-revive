@@ -19,6 +19,7 @@ const {
   isImagePageUrl,
   canonicalUrl,
 } = require('../utils/upstreamUrl')
+const { assertPublicImageHost } = require('../utils/resolvePublic')
 const router = express.Router()
 
 router.get('/', async (req, res) => {
@@ -171,6 +172,7 @@ function redirectTarget(location, from) {
 async function fetchImage(url, req, cancelToken) {
   let target = url
   for (let hop = 0; ; hop++) {
+    await assertPublicImageHost(target)
     const response = await axios.get(target, {
       cancelToken,
       // site cookies go to the site only, never to third-party H@H hosts

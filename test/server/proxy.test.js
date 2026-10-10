@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { require } from './helpers'
 import { PassThrough } from 'node:stream'
+import dns from 'node:dns'
 const axios = require('../../server/src/axios')
 const router = require('../../server/src/gallery/galleryRouter')
 
@@ -23,6 +24,12 @@ const fakeReq = (url) =>
 const flush = () => new Promise((r) => setTimeout(r, 0))
 
 describe('/api/gallery/proxy', () => {
+  beforeEach(() => {
+    // hath.network hops resolve DNS before connecting; keep tests offline
+    vi.spyOn(dns.promises, 'lookup').mockResolvedValue([
+      { address: '203.0.113.10', family: 4 },
+    ])
+  })
   afterEach(() => vi.restoreAllMocks())
 
   it('refuses hosts outside the allowlist', async () => {
@@ -224,4 +231,16 @@ describe('/api/gallery/proxy', () => {
     await flush()
     expect(res.destroyed).toBe(true)
   })
+  it('refuses a *.hath.network host that resolves to a private address', async () => {
+    vi.mocked(dns.promises.lookup).mockResolvedValue([
+      { address: '127.0.0.1', family: 4 },
+    ])
+    const get = vi.spyOn(axios, 'get')
+    const res = fakeRes()
+    await handler(fakeReq('https://abcd.efgh.hath.network/h/x/1.jpg'), res)
+    await flush()
+    expect(get).not.toHaveBeenCalled()
+    expect(res.statusCode).toBe(502)
+  })
+
 })
