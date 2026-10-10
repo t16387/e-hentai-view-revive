@@ -37,6 +37,47 @@ import FavIconButton from './FavIconButton'
 import InfoCard from './InfoCard'
 import TagList from './TagList'
 import TorrentIconButton from './TorrentIconButton'
+import MenuBookIcon from '@mui/icons-material/MenuBook'
+
+/** reader route for a gallery, resuming at the saved page when there is one */
+export function readHref(
+  info: Pick<IndexListItemPorps, 'gid' | 'token'>,
+  latestReadPage?: number
+): [string, string] {
+  const resume = isNil(latestReadPage) ? '' : `?current=${latestReadPage}`
+  return [
+    `/[gid]/[token]/read${resume}`,
+    `/${info.gid}/${info.token}/read${resume}`,
+  ]
+}
+
+/** "Read" / "Read 12p" button, shared by the desktop and mobile layouts */
+export const ReadButton: React.FC<{
+  info: IndexListItemPorps
+  className?: string
+  startIcon?: React.ReactNode
+}> = ({ info, className, startIcon }) => {
+  const router = useRouter()
+  const [t] = useTranslation()
+  const [comicReadPageHistory] = useComicReadPageHistory()
+  const latestReadPage = comicReadPageHistory[`/${info.gid}/${info.token}/read`]
+  return (
+    <Button
+      disableElevation
+      color="primary"
+      variant="contained"
+      className={className}
+      startIcon={startIcon}
+      data-read-button
+      onClick={() => {
+        const [href, as] = readHref(info, latestReadPage)
+        router.push(href, as)
+      }}
+    >
+      {`${t('Read')}${isNil(latestReadPage) ? '' : ` ${latestReadPage + 1}p`}`}
+    </Button>
+  )
+}
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
@@ -102,7 +143,12 @@ const useStyles = makeStyles((theme: Theme) =>
       [theme.breakpoints.up('sm')]: {
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
       },
+    },
+    readBtn: {
+      whiteSpace: 'nowrap',
+      marginBottom: theme.spacing(1),
     },
   })
 )
@@ -172,6 +218,11 @@ const Info: React.FC<InfoProps> = ({ info, tagList }) => {
             <TagList tagList={tagList} />
           </Grid>
           <Grid item className={classes.actions}>
+            <ReadButton
+              info={info}
+              className={classes.readBtn}
+              startIcon={<MenuBookIcon />}
+            />
             <TorrentIconButton info={info} />
             <FavIconButton info={info} />
             <Tooltip title={t('OpenEH') as string}>
@@ -234,8 +285,6 @@ const MobileInfo: React.FC<InfoProps> = ({ info, tagList }) => {
   const router = useRouter()
   const [t] = useTranslation()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [comicReadPageHistory] = useComicReadPageHistory()
-  const latestReadPage = comicReadPageHistory[`/${info.gid}/${info.token}/read`]
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget)
@@ -283,26 +332,7 @@ const MobileInfo: React.FC<InfoProps> = ({ info, tagList }) => {
             className={classes.oneline}
           >
             <Grid item>
-              <Button
-                disableElevation
-                color="primary"
-                variant="contained"
-                className={classes.btn}
-                onClick={() => {
-                  router.push(
-                    latestReadPage
-                      ? `/[gid]/[token]/read?current=${latestReadPage}`
-                      : '/[gid]/[token]/read',
-                    latestReadPage
-                      ? `/${info.gid}/${info.token}/read?current=${latestReadPage}`
-                      : `/${info.gid}/${info.token}/read`
-                  )
-                }}
-              >
-                {`${t('Read')}${
-                  isNil(latestReadPage) ? '' : ` ${latestReadPage + 1}p`
-                }`}
-              </Button>
+              <ReadButton info={info} className={classes.btn} />
             </Grid>
             <Grid item>
               <IconButton
