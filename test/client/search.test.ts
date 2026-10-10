@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CAT,
+  CAT_ALL,
+  buildSearchParams,
+  catsToHideMask,
+  composeSearchQuery,
+  extractLanguageTerm,
+  filtersKey,
   galleryListKey,
+  hideMaskToIncluded,
   parseGalleryUrl,
   readQueryString,
+  readSearchFilters,
   searchHref,
+  stripLanguageTerm,
   tagTerm,
   tagTermFromKeyword,
   uploaderTerm,
@@ -21,23 +31,128 @@ describe('search terms', () => {
   })
 })
 
+describe('category bitmask', () => {
+  it('maps include ↔ hide like site toggle_category / JHenTai', () => {
+    expect(catsToHideMask(CAT_ALL)).toBe(0)
+    expect(hideMaskToIncluded(0)).toBe(CAT_ALL)
+    // hide Doujinshi only
+    expect(catsToHideMask(CAT_ALL ^ CAT.Doujinshi)).toBe(CAT.Doujinshi)
+    expect(hideMaskToIncluded(CAT.Doujinshi)).toBe(CAT_ALL ^ CAT.Doujinshi)
+    // Non-H only
+    expect(catsToHideMask(CAT['Non-H'])).toBe(CAT_ALL ^ CAT['Non-H'])
+    expect(catsToHideMask(CAT['Non-H'])).toBe(767) // 1023-256
+  })
+  it('individual hide bits match EHWiki / live cat_* ids', () => {
+    expect(CAT.Misc).toBe(1)
+    expect(CAT.Doujinshi).toBe(2)
+    expect(CAT.Manga).toBe(4)
+    expect(CAT.Artist_CG).toBe(8)
+    expect(CAT.Game_CG).toBe(16)
+    expect(CAT.Image_Set).toBe(32)
+    expect(CAT.Cosplay).toBe(64)
+    expect(CAT.Asian_Porn).toBe(128)
+    expect(CAT['Non-H']).toBe(256)
+    expect(CAT.Western).toBe(512)
+    expect(CAT_ALL).toBe(1023)
+  })
+})
+
+describe('buildSearchParams', () => {
+  it('omits empty / all-categories / any-rating', () => {
+    expect(buildSearchParams({})).toEqual({})
+    expect(buildSearchParams({ f_cats: 0, f_srdd: 0 })).toEqual({})
+    expect(buildSearchParams({ f_search: '  hello  ' })).toEqual({
+      f_search: 'hello',
+    })
+  })
+  it('sets advsearch when any advanced flag is on', () => {
+    expect(buildSearchParams({ f_sto: true, f_srdd: 4 })).toEqual({
+      advsearch: '1',
+      f_sto: 'on',
+      f_srdd: '4',
+    })
+    expect(
+      buildSearchParams({ f_sh: true, f_spf: 10, f_spt: 200, f_sfl: true })
+    ).toEqual({
+      advsearch: '1',
+      f_sh: 'on',
+      f_spf: '10',
+      f_spt: '200',
+      f_sfl: 'on',
+    })
+  })
+  it('injects language into f_search', () => {
+    expect(buildSearchParams({ language: 'english', f_search: 'foo' })).toEqual(
+      {
+        f_search: 'language:"english$" foo',
+      }
+    )
+    expect(
+      composeSearchQuery({
+        f_search: 'language:"japanese$" bar',
+        language: 'english',
+      })
+    ).toBe('language:"japanese$" bar')
+  })
+  it('searchHref encodes once and carries cats', () => {
+    const href = searchHref({
+      f_search: 'a&b',
+      f_cats: CAT.Misc | CAT.Doujinshi,
+      f_sto: true,
+    })
+    expect(href).toContain('/result?')
+    const qs = new URLSearchParams(href.split('?')[1])
+    expect(qs.get('f_search')).toBe('a&b')
+    expect(qs.get('f_cats')).toBe(String(CAT.Misc | CAT.Doujinshi))
+    expect(qs.get('advsearch')).toBe('1')
+    expect(qs.get('f_sto')).toBe('on')
+  })
+})
+
+describe('readSearchFilters', () => {
+  it('parses router.query values', () => {
+    const f = readSearchFilters({
+      f_search: 'language:"english$" test',
+      f_cats: '3',
+      f_sh: 'on',
+      f_srdd: '5',
+      f_spf: '20',
+      evil: '1',
+    })
+    expect(f.f_search).toBe('test')
+    expect(f.language).toBe('english')
+    expect(f.f_cats).toBe(3)
+    expect(f.f_sh).toBe(true)
+    expect(f.f_srdd).toBe(5)
+    expect(f.f_spf).toBe(20)
+    expect(stripLanguageTerm('language:"chinese$" x')).toBe('x')
+    expect(extractLanguageTerm('language:"korean$"')).toBe('korean')
+  })
+  it('rejects out-of-range numbers', () => {
+    expect(readSearchFilters({ f_cats: '5000', f_srdd: '9' })).toEqual({})
+  })
+})
+
 describe('URL encoding', () => {
   it('encodes the query exactly once', () => {
     const q = 'other:"a b$" 100% & more #1 +x'
     const href = searchHref(q)
     expect(href).toBe('/result?f_search=' + encodeURIComponent(q))
-    // what Next's router hands back after decoding the URL once
     const decoded = new URLSearchParams(href.split('?')[1]).get('f_search')
     expect(readQueryString(decoded ?? undefined)).toBe(q)
   })
   it('readQueryString does not double-decode and handles missing values', () => {
-    expect(readQueryString('100%')).toBe('100%') // decodeURIComponent would throw
+    expect(readQueryString('100%')).toBe('100%')
     expect(readQueryString(undefined)).toBe('')
     expect(readQueryString(['a', 'b'])).toBe('a')
   })
   it('detects pasted gallery links on both domains', () => {
-    expect(parseGalleryUrl('https://e-hentai.org/g/1000001/aaaaaaaaaa/')).toEqual({ gid: '1000001', token: 'aaaaaaaaaa' })
-    expect(parseGalleryUrl('https://exhentai.org/g/1000001/aaaaaaaaaa/')).toEqual({ gid: '1000001', token: 'aaaaaaaaaa' })
+    expect(
+      parseGalleryUrl('https://e-hentai.org/g/1000001/aaaaaaaaaa/')
+    ).toEqual({ gid: '1000001', token: 'aaaaaaaaaa' })
+    expect(
+      parseGalleryUrl('https://exhentai.org/g/1000001/aaaaaaaaaa/')
+    ).toEqual({ gid: '1000001', token: 'aaaaaaaaaa' })
     expect(parseGalleryUrl('just words')).toBeNull()
   })
 })
@@ -45,25 +160,60 @@ describe('URL encoding', () => {
 describe('galleryListKey (cursor pagination)', () => {
   it('first page has no cursor', () => {
     expect(galleryListKey('index', {}, 0, null)).toBe('/api/gallery')
-    expect(galleryListKey('index', { f_search: 'a&b' }, 0, null)).toBe('/api/gallery?f_search=a%26b')
+    expect(galleryListKey('index', { f_search: 'a&b' }, 0, null)).toBe(
+      '/api/gallery?f_search=a%26b'
+    )
+  })
+  it('forwards advanced filters on index and watched', () => {
+    const key = galleryListKey(
+      'index',
+      { f_search: 'x', f_cats: 1, f_sto: true, f_srdd: 3 },
+      0,
+      null
+    )!
+    const qs = new URLSearchParams(key.split('?')[1])
+    expect(qs.get('f_cats')).toBe('1')
+    expect(qs.get('advsearch')).toBe('1')
+    expect(qs.get('f_sto')).toBe('on')
+    expect(qs.get('f_srdd')).toBe('3')
+    const w = galleryListKey('watched', { f_cats: 2 }, 0, null)!
+    expect(w).toContain('f_cats=2')
   })
   it('next pages carry the previous page next cursor', () => {
-    expect(galleryListKey('index', { f_search: 'x y' }, 1, { next: '1000001' })).toBe('/api/gallery?f_search=x+y&next=1000001')
-    expect(galleryListKey('watched', {}, 3, { next: '42' })).toBe('/api/watched?next=42')
+    expect(
+      galleryListKey('index', { f_search: 'x y' }, 1, { next: '1000001' })
+    ).toBe('/api/gallery?f_search=x%20y&next=1000001')
+    expect(galleryListKey('watched', {}, 3, { next: '42' })).toBe(
+      '/api/watched?next=42'
+    )
   })
   it('stops when the previous page has no next cursor', () => {
     expect(galleryListKey('index', {}, 1, { next: null })).toBeNull()
     expect(galleryListKey('index', {}, 1, {})).toBeNull()
   })
   it('favorites keep favcat and use gid-favtime cursors', () => {
-    expect(galleryListKey('favorites', {}, 0, null)).toBe('/api/favorites?favcat=all')
-    expect(galleryListKey('favorites', { favcat: '2' }, 1, { next: '1000001-1700000000' })).toBe('/api/favorites?favcat=2&next=1000001-1700000000')
+    expect(galleryListKey('favorites', {}, 0, null)).toBe(
+      '/api/favorites?favcat=all'
+    )
+    expect(
+      galleryListKey('favorites', { favcat: '2' }, 1, {
+        next: '1000001-1700000000',
+      })
+    ).toBe('/api/favorites?favcat=2&next=1000001-1700000000')
   })
   it('popular has a single page', () => {
     expect(galleryListKey('popular', {}, 0, null)).toBe('/api/popular')
     expect(galleryListKey('popular', {}, 1, { next: '1' })).toBeNull()
   })
   it('never sends page=', () => {
-    for (let i = 0; i < 3; i++) expect(galleryListKey('index', { f_search: 'q' }, i, { next: '9' })).not.toMatch(/page=/)
+    for (let i = 0; i < 3; i++)
+      expect(
+        galleryListKey('index', { f_search: 'q' }, i, { next: '9' })
+      ).not.toMatch(/page=/)
+  })
+  it('filtersKey is stable', () => {
+    expect(filtersKey({ f_search: 'a', f_cats: 1 })).toBe(
+      filtersKey({ f_cats: 1, f_search: 'a' })
+    )
   })
 })
