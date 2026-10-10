@@ -1,14 +1,6 @@
 import { Detailpage } from '@/interface/gallery'
 import { composeSelectedTags, searchHref } from '@/utils/search'
-import {
-  Box,
-  Button,
-  Chip,
-  Fab,
-  Tooltip,
-  Typography,
-  Zoom,
-} from '@mui/material'
+import { Box, Button, Chip, Fab, Tooltip, Typography } from '@mui/material'
 import { alpha, Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
@@ -146,7 +138,7 @@ const TagList: React.FC<Pick<Detailpage, 'tagList'>> = ({ tagList }) => {
           ))}
         </tbody>
       </table>
-      <Zoom in={count > 0} unmountOnExit>
+      {count > 0 && (
         <Box
           className={classes.bar}
           role="region"
@@ -170,7 +162,7 @@ const TagList: React.FC<Pick<Detailpage, 'tagList'>> = ({ tagList }) => {
             {t('Tag.SearchSelected')} ({count})
           </Fab>
         </Box>
-      </Zoom>
+      )}
     </>
   )
 }
