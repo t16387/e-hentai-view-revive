@@ -86,7 +86,10 @@
   "ShowTag.All": "All",
   "ShowTag.Hidden": "Hidden",
   "Similar": "Similar",
-  "imgFit":"Picture adaptive",
-  "TapToReload":"Ketik untuk muat semula",
-  "imgDirect":"Muat imej terus dari H@H"
+  "imgFit": "Picture adaptive",
+  "TapToReload": "Ketik untuk muat semula",
+  "imgDirect": "Muat imej terus dari H@H",
+  "EH.OpenExternal": "Buka di laman galeri",
+  "EH.IframeUnavailable": "Laman galeri tidak boleh di-embed di sini (pelayar menyekat kuki pihak ketiga, menyebabkan gelung ubah hala). Buka dalam tab baharu; salin kuki dari User Cookie jika perlu log masuk di sana.",
+  "SignIn.RequiredField": "Medan ini diperlukan"
 }

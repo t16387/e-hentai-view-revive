@@ -86,7 +86,10 @@
   "ShowTag.All": "모두",
   "ShowTag.Hidden": "숨김",
   "Similar": "유사",
-  "imgFit":"픽처 어댑티브",
-  "TapToReload":"탭하여 다시 불러오기",
-  "imgDirect":"H@H에서 직접 이미지 불러오기"
+  "imgFit": "픽처 어댑티브",
+  "TapToReload": "탭하여 다시 불러오기",
+  "imgDirect": "H@H에서 직접 이미지 불러오기",
+  "EH.OpenExternal": "갤러리 사이트에서 열기",
+  "EH.IframeUnavailable": "갤러리 사이트를 여기에 임베드할 수 없습니다(브라우저가 서드파티 쿠키를 차단해 리다이렉트 루프가 발생합니다). 새 탭에서 여세요. 해당 사이트 로그인이 필요하면 User Cookie에서 쿠키를 복사하세요.",
+  "SignIn.RequiredField": "필수 항목입니다"
 }

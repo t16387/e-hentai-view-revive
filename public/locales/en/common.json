@@ -66,7 +66,7 @@
   "Cancel": "Cancel",
   "Search": "Search",
   "Search.Short": "The search string is too short, and was ignored.",
-  "Search.NoThisFound": "No this found",
+  "Search.NoThisFound": "Nothing found",
   "Download.Progress": "Download Progress",
   "Download.ErrorInfo": "Error Info",
   "Download.Done": "Done",
@@ -86,7 +86,10 @@
   "ShowTag.All": "All",
   "ShowTag.Hidden": "Hidden",
   "Similar": "Similar",
-  "imgFit":"Picture adaptive",
-  "TapToReload":"Tap to reload",
-  "imgDirect":"Load images directly from H@H"
+  "imgFit": "Picture adaptive",
+  "TapToReload": "Tap to reload",
+  "imgDirect": "Load images directly from H@H",
+  "EH.OpenExternal": "Open on the gallery site",
+  "EH.IframeUnavailable": "The gallery site cannot be embedded here (browsers block third-party cookies, which caused a redirect loop). Open it in a new tab; copy your cookies from User Cookie if you need to sign in there.",
+  "SignIn.RequiredField": "This field is required"
 }

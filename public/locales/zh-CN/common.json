@@ -86,7 +86,10 @@
   "ShowTag.All": "全部显示",
   "ShowTag.Hidden": "不显示",
   "Similar": "相关画廊",
-  "imgFit":"图片自适应",
-  "TapToReload":"点击重新加载",
-  "imgDirect":"直接从 H@H 加载图片"
+  "imgFit": "图片自适应",
+  "TapToReload": "点击重新加载",
+  "imgDirect": "直接从 H@H 加载图片",
+  "EH.OpenExternal": "在图库站点打开",
+  "EH.IframeUnavailable": "无法在此嵌入图库站点（浏览器会拦截第三方 Cookie，导致反复重定向）。请在新标签页打开；如需在该站点登录，可从「User Cookie」复制 Cookie。",
+  "SignIn.RequiredField": "此项为必填"
 }

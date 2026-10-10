@@ -66,7 +66,7 @@
   "Cancel": "ยกเลิก",
   "Search": "ค้นหา",
   "Search.Short": "สตริงการค้นหาสั้นเกินไปและถูกยกเว้น",
-  "Search.NoThisFound": "ไม่พบสิ่งนี้",
+  "Search.NoThisFound": "ไม่พบรายการ",
   "Download.Progress": "ความคืบหน้าการดาวน์โหลด",
   "Download.ErrorInfo": "ข้อมูลข้อผิดพลาด",
   "Download.Done": "เสร็จแล้ว",
@@ -86,7 +86,10 @@
   "ShowTag.All": "ทั้งหมด",
   "ShowTag.Hidden": "ซ่อน",
   "Similar": "คล้ายกัน",
-  "imgFit":"การปรับภาพ",
-  "TapToReload":"แตะเพื่อโหลดใหม่",
-  "imgDirect":"โหลดภาพจาก H@H โดยตรง"
+  "imgFit": "การปรับภาพ",
+  "TapToReload": "แตะเพื่อโหลดใหม่",
+  "imgDirect": "โหลดภาพจาก H@H โดยตรง",
+  "EH.OpenExternal": "เปิดบนเว็บแกลเลอรี",
+  "EH.IframeUnavailable": "ไม่สามารถฝังเว็บแกลเลอรีที่นี่ได้ (เบราว์เซอร์บล็อกคุกกี้บุคคลที่สามจนเกิดการเปลี่ยนเส้นทางซ้ำ) เปิดในแท็บใหม่ และคัดลอกคุกกี้จาก User Cookie หากต้องเข้าสู่ระบบที่นั่น",
+  "SignIn.RequiredField": "ต้องกรอกช่องนี้"
 }
