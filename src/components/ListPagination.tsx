@@ -1,4 +1,5 @@
 import { Box, Button, IconButton, TextField, Typography } from '@mui/material'
+import { alpha, Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
@@ -6,35 +7,136 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { useTranslation } from 'next-i18next'
 import React, { useEffect, useState } from 'react'
 
-const useStyles = makeStyles((theme) =>
-  createStyles({
+/**
+ * Creative direction seed: "e-hentai-view v3"
+ * - e → emerald/teal nav discs
+ * - h → horizon amber jump CTA
+ * - view → viewfinder frame around the page index
+ * - v3 → three-zone layout (prev | lens | next), triangular chevron rhythm
+ */
+
+const TEAL = '#0D7377'
+const TEAL_LIGHT = '#14A3A8'
+const AMBER = '#E8A838'
+const AMBER_TEXT = '#1A1205'
+
+const useStyles = makeStyles((theme: Theme) => {
+  const isDark = theme.palette.mode === 'dark'
+  const teal = isDark ? TEAL_LIGHT : TEAL
+  return createStyles({
     root: {
       display: 'flex',
-      flexWrap: 'wrap',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: theme.spacing(1),
+      padding: theme.spacing(1.75, 1),
+      width: '100%',
+      maxWidth: 520,
+      marginLeft: 'auto',
+      marginRight: 'auto',
+    },
+    /** Three-zone control strip */
+    strip: {
+      display: 'grid',
+      gridTemplateColumns: 'auto 1fr auto',
+      alignItems: 'center',
+      gap: theme.spacing(1),
+      width: '100%',
+      padding: theme.spacing(0.75),
+      borderRadius: 14,
+      background: isDark ? alpha('#0D7377', 0.18) : alpha('#0D7377', 0.06),
+      border: `1px solid ${alpha(teal, isDark ? 0.45 : 0.28)}`,
+      boxShadow: isDark
+        ? `0 0 0 1px ${alpha('#fff', 0.04)}`
+        : `0 1px 2px ${alpha('#0D7377', 0.08)}`,
+    },
+    disc: {
+      width: 48,
+      height: 48,
+      borderRadius: '50%',
+      backgroundColor: teal,
+      color: '#fff',
+      boxShadow: `0 2px 0 ${alpha('#000', 0.18)}`,
+      '&:hover': {
+        backgroundColor: isDark ? TEAL : TEAL_LIGHT,
+      },
+      '&.Mui-disabled': {
+        backgroundColor: alpha(teal, 0.28),
+        color: alpha('#fff', 0.55),
+      },
+    },
+    /** Viewfinder / lens for current page */
+    lens: {
+      display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: theme.spacing(1),
-      padding: theme.spacing(1.5, 0),
+      minHeight: 48,
+      padding: theme.spacing(0.5, 1.25),
+      borderRadius: 10,
+      border: `2px solid ${alpha(teal, 0.55)}`,
+      background: isDark ? alpha('#000', 0.35) : alpha('#fff', 0.85),
+      boxShadow: `inset 0 0 0 1px ${alpha(AMBER, 0.35)}`,
     },
-    label: {
-      minWidth: 96,
-      textAlign: 'center',
+    pageLabel: {
+      fontFamily:
+        'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+      fontWeight: 700,
+      fontSize: '0.95rem',
+      letterSpacing: 0.4,
+      lineHeight: 1.2,
+      color: isDark ? '#E8F6F6' : '#0A3D3F',
       userSelect: 'none',
+      textAlign: 'center',
     },
     jump: {
       display: 'inline-flex',
       alignItems: 'center',
-      gap: theme.spacing(0.5),
+      gap: theme.spacing(0.75),
+      flexWrap: 'wrap',
+      justifyContent: 'center',
     },
     field: {
-      width: 72,
+      width: 80,
+      '& .MuiOutlinedInput-root': {
+        borderRadius: 10,
+        minHeight: 44,
+        fontFamily:
+          'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+      },
+    },
+    go: {
+      minHeight: 44,
+      minWidth: 56,
+      borderRadius: 10,
+      fontWeight: 800,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      backgroundColor: AMBER,
+      color: AMBER_TEXT,
+      boxShadow: `0 2px 0 ${alpha('#8A5A10', 0.45)}`,
+      '&:hover': {
+        backgroundColor: '#F0B84A',
+      },
+      '&.Mui-disabled': {
+        backgroundColor: alpha(AMBER, 0.35),
+        color: alpha(AMBER_TEXT, 0.45),
+      },
     },
     hint: {
       width: '100%',
       textAlign: 'center',
     },
+    cap: {
+      fontSize: '0.65rem',
+      letterSpacing: 1.6,
+      textTransform: 'uppercase',
+      color: alpha(teal, 0.9),
+      fontWeight: 700,
+      marginBottom: 2,
+    },
   })
-)
+})
 
 export interface ListPaginationProps {
   page: number
@@ -86,26 +188,34 @@ const ListPagination: React.FC<ListPaginationProps> = ({
       className={classes.root}
       component="nav"
       aria-label={t('List.Pagination')}
+      data-pager="ehv-v3"
     >
-      <IconButton
-        size="small"
-        onClick={onPrev}
-        disabled={disabled || !hasPrev}
-        aria-label={t('List.Prev')}
-      >
-        <ChevronLeftIcon />
-      </IconButton>
-      <Typography variant="body2" className={classes.label}>
-        {pageLabel}
-      </Typography>
-      <IconButton
-        size="small"
-        onClick={onNext}
-        disabled={disabled || !hasNext}
-        aria-label={t('List.Next')}
-      >
-        <ChevronRightIcon />
-      </IconButton>
+      <Box className={classes.strip}>
+        <IconButton
+          className={classes.disc}
+          onClick={onPrev}
+          disabled={disabled || !hasPrev}
+          aria-label={t('List.Prev')}
+          size="large"
+        >
+          <ChevronLeftIcon />
+        </IconButton>
+        <Box className={classes.lens} aria-live="polite">
+          <Typography className={classes.cap} component="span">
+            view
+          </Typography>
+          <Typography className={classes.pageLabel}>{pageLabel}</Typography>
+        </Box>
+        <IconButton
+          className={classes.disc}
+          onClick={onNext}
+          disabled={disabled || !hasNext}
+          aria-label={t('List.Next')}
+          size="large"
+        >
+          <ChevronRightIcon />
+        </IconButton>
+      </Box>
       <form className={classes.jump} onSubmit={submitJump}>
         <TextField
           className={classes.field}
@@ -122,9 +232,9 @@ const ListPagination: React.FC<ListPaginationProps> = ({
         />
         <Button
           type="submit"
-          size="small"
-          variant="outlined"
+          className={classes.go}
           disabled={disabled}
+          disableElevation
         >
           {t('List.Go')}
         </Button>
