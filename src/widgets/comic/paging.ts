@@ -150,3 +150,29 @@ export function visibleRange(
   while (end < n && offsets[end] < limit) end++
   return { start, end } // end is exclusive
 }
+
+/**
+ * Index delta for a physical left/right tap or arrow key.
+ * RTL (manga) mirrors LTR: left goes forward, right goes back.
+ * `direction` is the reader mode ('ltr' | 'rtl'); vertical has no side nav.
+ */
+export function horizontalStep(
+  direction: 'ltr' | 'rtl',
+  side: 'left' | 'right'
+): -1 | 1 {
+  if (side === 'left') return direction === 'rtl' ? 1 : -1
+  return direction === 'rtl' ? -1 : 1
+}
+
+/** which third of the viewport a tap landed in (center toggles controls) */
+export function tapZone(
+  clientX: number,
+  left: number,
+  width: number
+): 'left' | 'center' | 'right' {
+  if (width <= 0) return 'center'
+  const x = (clientX - left) / width
+  if (x < 1 / 3) return 'left'
+  if (x > 2 / 3) return 'right'
+  return 'center'
+}

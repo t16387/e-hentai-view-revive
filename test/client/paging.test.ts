@@ -3,12 +3,14 @@ import {
   clampIndex,
   ComicSlot,
   DEFAULT_ASPECT,
+  horizontalStep,
   indexAtScroll,
   mergePage,
   pageOfIndex,
   pagesToLoad,
   prefixOffsets,
   resolveStartIndex,
+  tapZone,
   visibleRange,
 } from '@/widgets/comic/paging'
 
@@ -183,5 +185,22 @@ describe('reader paging with 200 thumbnails per page', () => {
     expect(start).toBe(401)
     expect(pageOfIndex(start, perPage)).toBe(2)
     expect(resolveStartIndex({ query: '9999', total })).toBe(total - 1)
+  })
+})
+
+describe('horizontalStep / tapZone (LTR vs RTL)', () => {
+  it('LTR: left goes back, right goes forward', () => {
+    expect(horizontalStep('ltr', 'left')).toBe(-1)
+    expect(horizontalStep('ltr', 'right')).toBe(1)
+  })
+  it('RTL: left goes forward, right goes back', () => {
+    expect(horizontalStep('rtl', 'left')).toBe(1)
+    expect(horizontalStep('rtl', 'right')).toBe(-1)
+  })
+  it('tapZone splits the viewport into thirds', () => {
+    expect(tapZone(10, 0, 300)).toBe('left')
+    expect(tapZone(150, 0, 300)).toBe('center')
+    expect(tapZone(290, 0, 300)).toBe('right')
+    expect(tapZone(0, 0, 0)).toBe('center')
   })
 })
