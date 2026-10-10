@@ -20,6 +20,7 @@ import {
   searchHref,
   stripAiTerm,
   stripLanguageTerm,
+  composeSelectedTags,
   tagTerm,
   tagTermFromKeyword,
   uploaderTerm,
@@ -30,6 +31,15 @@ describe('search terms', () => {
     expect(tagTerm('other', 'placeholder')).toBe('other:"placeholder$"')
     expect(tagTerm('other', 'multi word tag')).toBe('other:"multi word tag$"')
     expect(tagTermFromKeyword('misc:two words')).toBe('misc:"two words$"')
+  })
+  it('composes multi-tag f_search', () => {
+    expect(
+      composeSelectedTags([
+        { namespace: 'artist', name: 'someone' },
+        { namespace: 'female', name: 'long hair' },
+      ])
+    ).toBe('artist:"someone$" female:"long hair$"')
+    expect(composeSelectedTags([])).toBe('')
   })
   it('uploader terms', () => {
     expect(uploaderTerm('someone')).toBe('uploader:someone')

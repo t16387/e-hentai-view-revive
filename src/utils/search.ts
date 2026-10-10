@@ -24,6 +24,13 @@ export function tagTermFromKeyword(keyword: string) {
   return tagTerm(keyword.slice(0, i), keyword.slice(i + 1))
 }
 
+/** Join selected gallery tags into one f_search string (quoted ns:"tag$"). */
+export function composeSelectedTags(
+  tags: { namespace: string; name: string }[]
+) {
+  return tags.map((x) => tagTerm(x.namespace, x.name)).join(' ')
+}
+
 /** uploader search term, quoted only when needed */
 export function uploaderTerm(name: string) {
   const n = name.trim()
