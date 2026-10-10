@@ -1,7 +1,9 @@
 import Axios from 'axios'
 import Router from 'next/router'
 import { DetailThumbPage } from '@/interface/gallery'
-export const axios = Axios.create({})
+export const axios = Axios.create({
+  headers: { 'X-EHV-CSRF': '1' },
+})
 // const maxQueueLength = 8
 // let count = 0
 // axios.interceptors.request.use((req) => {

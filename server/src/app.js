@@ -17,14 +17,69 @@ app.use(bodyParser.json())
 // parse cookies
 app.use(cookieParser())
 
+/**
+ * Path only (no query string) in lower case, so `/API/gallery` cannot skip
+ * the login gate and logs never print image keys / search terms.
+ */
+function apiPath(req) {
+  const raw = (req.originalUrl || req.url || '').split('?')[0]
+  return raw.toLowerCase()
+}
+
+/**
+ * CSRF for cookie-authenticated state changes: SameSite=Lax already blocks
+ * cross-site form POSTs; also require a same-origin Origin/Referer or the
+ * custom X-EHV-CSRF header the SPA always sends.
+ */
+function csrfOk(req) {
+  if (req.get('x-ehv-csrf') === '1') return true
+  const host = (req.get('host') || '').toLowerCase()
+  if (!host) return false
+  const origin = req.get('origin')
+  if (origin) {
+    try {
+      return new URL(origin).host.toLowerCase() === host
+    } catch (e) {
+      return false
+    }
+  }
+  const referer = req.get('referer')
+  if (referer) {
+    try {
+      return new URL(referer).host.toLowerCase() === host
+    } catch (e) {
+      return false
+    }
+  }
+  // non-browser clients (tests, curl) with neither header: allow only when
+  // there is no cookie session yet (login) — still require the custom header
+  // once we standardise the SPA. Reject bare cross-site-looking posts.
+  return false
+}
+
+const CSRF_PATHS = ['/api/user/login', '/api/user/logout', '/api/user/setting']
+
 app.use((req, res, next) => {
-  if (req.url.startsWith('/api')) console.log('%s -> %s', req.method, req.url)
+  const path = apiPath(req)
+  if (path.startsWith('/api')) console.log('%s -> %s', req.method, path)
+
+  if (
+    (req.method === 'POST' ||
+      req.method === 'PUT' ||
+      req.method === 'PATCH' ||
+      req.method === 'DELETE') &&
+    CSRF_PATHS.some((p) => path === p || path.startsWith(p + '/'))
+  ) {
+    if (!csrfOk(req)) {
+      return res.status(403).json({ error: true, message: 'csrf rejected' })
+    }
+  }
 
   // exhentai needs a logged-in account; the public e-hentai site does not
   if (
     requiresLogin &&
-    req.url.startsWith('/api/') &&
-    !req.url.startsWith('/api/user')
+    path.startsWith('/api/') &&
+    !path.startsWith('/api/user')
   ) {
     if (req.cookies && !req.cookies.ipb_member_id) {
       return res.json({ error: true, message: 'No login' })
