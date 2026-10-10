@@ -101,6 +101,21 @@ export const SEARCH_LANGUAGES = [
   'n/a',
 ] as const
 
+/**
+ * Live site tag (e-hentai/exhentai, 2026-10): namespace `other`, name
+ * `ai generated`. Exact term `other:"ai generated$"`. No dedicated front-page
+ * control — peers inject the same tag / `-tag` into f_search.
+ */
+export const AI_GENERATED_NS = 'other'
+export const AI_GENERATED_NAME = 'ai generated'
+/** Include-only exact tag term */
+export const AI_ONLY_TERM = 'other:"ai generated$"'
+/** Exclude exact tag term (site shows "Excluded N galleries…") */
+export const AI_EXCLUDE_TERM = '-other:"ai generated$"'
+
+/** any = no AI clause; only = require tag; exclude = negate tag */
+export type AiFilterMode = 'any' | 'only' | 'exclude'
+
 export interface SearchFilters {
   f_search?: string
   /** hide-mask; 0 / omit = all categories shown */
@@ -116,10 +131,17 @@ export interface SearchFilters {
   f_sft?: boolean
   /** appended as language:"name$" when set */
   language?: string
+  /**
+   * AI-generated tag filter. Injected into f_search (not a separate GET flag).
+   * Omit / 'any' = no clause.
+   */
+  ai?: AiFilterMode
   favcat?: string
 }
 
 const LANG_RE = /\blanguage:"([^"]+)"\$?/i
+/** Match exact include or exclude of other:"ai generated$" (optional $). */
+const AI_RE = /(^|\s)-?other:"ai generated\$?"(?=\s|$)/gi
 
 /** Strip a language:"…" term so the text field stays editable. */
 export function stripLanguageTerm(q: string) {
@@ -131,15 +153,38 @@ export function extractLanguageTerm(q: string): string | undefined {
   return m ? m[1].replace(/\$$/, '') : undefined
 }
 
+/** Remove AI include/exclude clauses from free-text query. */
+export function stripAiTerm(q: string) {
+  return q.replace(AI_RE, ' ').replace(/\s+/g, ' ').trim()
+}
+
+/** Detect AI filter mode encoded in a query string. */
+export function extractAiFilter(q: string): AiFilterMode | undefined {
+  const m = q.match(/(^|\s)(-)?other:"ai generated\$?"(?=\s|$)/i)
+  if (!m) return undefined
+  return m[2] === '-' ? 'exclude' : 'only'
+}
+
+export function aiTermForMode(mode: AiFilterMode | undefined) {
+  if (mode === 'only') return AI_ONLY_TERM
+  if (mode === 'exclude') return AI_EXCLUDE_TERM
+  return ''
+}
+
 /**
- * Final f_search sent upstream: optional language term + user text.
- * Language already present in the text is left alone.
+ * Final f_search sent upstream: optional language + AI clauses + user text.
+ * Language / AI already present in the text are left alone.
  */
 export function composeSearchQuery(filters: SearchFilters) {
   let q = (filters.f_search || '').trim()
   const lang = (filters.language || '').trim()
   if (lang && !LANG_RE.test(q)) {
     q = `language:"${lang.replace(/"/g, '')}$"${q ? ' ' + q : ''}`
+  }
+  const ai = filters.ai && filters.ai !== 'any' ? filters.ai : undefined
+  if (ai && !extractAiFilter(q)) {
+    const term = aiTermForMode(ai)
+    q = term + (q ? ' ' + q : '')
   }
   return q.trim()
 }
@@ -241,7 +286,18 @@ export function readSearchFilters(
   const langFromQuery = readQueryString(query.language)
   const langInText = extractLanguageTerm(raw)
   const language = langFromQuery || langInText
-  const f_search = language && langInText ? stripLanguageTerm(raw) : raw
+  const aiFromQuery = readQueryString(query.ai) as AiFilterMode | ''
+  const aiInText = extractAiFilter(raw)
+  const ai: AiFilterMode | undefined =
+    aiFromQuery === 'only' || aiFromQuery === 'exclude' || aiFromQuery === 'any'
+      ? aiFromQuery === 'any'
+        ? undefined
+        : aiFromQuery
+      : aiInText
+
+  let f_search = raw
+  if (language && langInText) f_search = stripLanguageTerm(f_search)
+  if (ai && aiInText) f_search = stripAiTerm(f_search)
 
   const filters: SearchFilters = {}
   if (f_search) filters.f_search = f_search
@@ -259,6 +315,7 @@ export function readSearchFilters(
   if (readOn(query.f_sfu)) filters.f_sfu = true
   if (readOn(query.f_sft)) filters.f_sft = true
   if (language) filters.language = language
+  if (ai) filters.ai = ai
   const favcat = readQueryString(query.favcat)
   if (favcat) filters.favcat = favcat
   return filters
@@ -284,6 +341,21 @@ export interface ListCursorPage {
 
 /** @deprecated use SearchFilters; kept as alias for call sites */
 export type GalleryListFilters = SearchFilters
+
+/**
+ * Estimate how many list pages the site would return for a result set.
+ * Uses the first page's item count as pageSize (typically 25). Returns
+ * null when total or pageSize is unknown / zero. The site has no true
+ * page=N; this is only for UI labels and jump bounds.
+ */
+export function estimateListPageCount(total: number, pageSize: number) {
+  if (!Number.isFinite(total) || total <= 0) return null
+  if (!Number.isFinite(pageSize) || pageSize <= 0) return null
+  return Math.max(1, Math.ceil(total / pageSize))
+}
+
+/** Max forward cursor walks when jumping to a far page (product limit). */
+export const LIST_JUMP_MAX_WALK = 50
 
 /**
  * SWR-infinite key for cursor pagination. The site ignores `page=N`; each

@@ -109,5 +109,19 @@
   "Search.Tags": "Tags",
   "Search.CatAll": "All categories",
   "Search.CatNone": "No categories",
-  "Search.EditFilters": "Edit filters"
+  "Search.EditFilters": "Edit filters",
+  "Search.AiFilter": "AI-generated",
+  "Search.AiAny": "Include AI",
+  "Search.AiExclude": "Exclude AI",
+  "Search.AiOnly": "Only AI",
+  "List.Pagination": "Gallery list pages",
+  "List.Prev": "Previous page",
+  "List.Next": "Next page",
+  "List.Page": "Page {{page}}",
+  "List.PageOf": "Page {{page}} / {{total}}",
+  "List.Jump": "Jump to page",
+  "List.Go": "Go",
+  "List.JumpTooFar": "Jump is limited to 50 pages ahead (site uses cursors, not page numbers).",
+  "List.JumpEnd": "Reached the last available page.",
+  "List.JumpInvalid": "Enter a page number of 1 or greater."
 }

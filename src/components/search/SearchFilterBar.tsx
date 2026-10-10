@@ -58,6 +58,8 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
       )
     }
     if (filters.language) chips.push(filters.language)
+    if (filters.ai === 'only') chips.push(t('Search.AiOnly'))
+    if (filters.ai === 'exclude') chips.push(t('Search.AiExclude'))
     if (filters.f_sfl || filters.f_sfu || filters.f_sft) {
       chips.push(t('Search.DisableFilters'))
     }

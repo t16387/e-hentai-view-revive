@@ -109,5 +109,19 @@
   "Search.Tags": "태그",
   "Search.CatAll": "모든 분류",
   "Search.CatNone": "분류 없음",
-  "Search.EditFilters": "필터 편집"
+  "Search.EditFilters": "필터 편집",
+  "Search.AiFilter": "AI 생성",
+  "Search.AiAny": "AI 포함",
+  "Search.AiExclude": "AI 제외",
+  "Search.AiOnly": "AI만",
+  "List.Pagination": "갤러리 목록 페이지",
+  "List.Prev": "이전 페이지",
+  "List.Next": "다음 페이지",
+  "List.Page": "{{page}}쪽",
+  "List.PageOf": "{{page}} / {{total}}쪽",
+  "List.Jump": "페이지로 이동",
+  "List.Go": "이동",
+  "List.JumpTooFar": "한 번에 앞으로 최대 50쪽까지 이동할 수 있습니다(사이트는 페이지 번호가 아닌 커서를 사용).",
+  "List.JumpEnd": "마지막 페이지입니다.",
+  "List.JumpInvalid": "1 이상의 페이지 번호를 입력하세요."
 }

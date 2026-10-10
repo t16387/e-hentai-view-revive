@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AI_EXCLUDE_TERM,
+  AI_ONLY_TERM,
   CAT,
   CAT_ALL,
+  LIST_JUMP_MAX_WALK,
   buildSearchParams,
   catsToHideMask,
   composeSearchQuery,
+  estimateListPageCount,
+  extractAiFilter,
   extractLanguageTerm,
   filtersKey,
   galleryListKey,
@@ -13,6 +18,7 @@ import {
   readQueryString,
   readSearchFilters,
   searchHref,
+  stripAiTerm,
   stripLanguageTerm,
   tagTerm,
   tagTermFromKeyword,
@@ -94,6 +100,21 @@ describe('buildSearchParams', () => {
       })
     ).toBe('language:"japanese$" bar')
   })
+  it('injects AI only / exclude into f_search', () => {
+    expect(buildSearchParams({ ai: 'only' })).toEqual({
+      f_search: AI_ONLY_TERM,
+    })
+    expect(buildSearchParams({ ai: 'exclude', f_search: 'foo' })).toEqual({
+      f_search: AI_EXCLUDE_TERM + ' foo',
+    })
+    expect(buildSearchParams({ ai: 'any' })).toEqual({})
+    expect(
+      composeSearchQuery({
+        f_search: AI_ONLY_TERM + ' bar',
+        ai: 'exclude',
+      })
+    ).toBe(AI_ONLY_TERM + ' bar')
+  })
   it('searchHref encodes once and carries cats', () => {
     const href = searchHref({
       f_search: 'a&b',
@@ -127,6 +148,21 @@ describe('readSearchFilters', () => {
     expect(f.f_spf).toBe(20)
     expect(stripLanguageTerm('language:"chinese$" x')).toBe('x')
     expect(extractLanguageTerm('language:"korean$"')).toBe('korean')
+  })
+  it('parses and strips AI filter terms', () => {
+    const only = readSearchFilters({
+      f_search: AI_ONLY_TERM + ' cats',
+    })
+    expect(only.ai).toBe('only')
+    expect(only.f_search).toBe('cats')
+    const excl = readSearchFilters({
+      f_search: AI_EXCLUDE_TERM + ' dogs',
+    })
+    expect(excl.ai).toBe('exclude')
+    expect(excl.f_search).toBe('dogs')
+    expect(readSearchFilters({ ai: 'only' }).ai).toBe('only')
+    expect(extractAiFilter(AI_EXCLUDE_TERM)).toBe('exclude')
+    expect(stripAiTerm(AI_ONLY_TERM + ' x')).toBe('x')
   })
   it('rejects out-of-range numbers', () => {
     expect(readSearchFilters({ f_cats: '5000', f_srdd: '9' })).toEqual({})
@@ -215,5 +251,17 @@ describe('galleryListKey (cursor pagination)', () => {
     expect(filtersKey({ f_search: 'a', f_cats: 1 })).toBe(
       filtersKey({ f_cats: 1, f_search: 'a' })
     )
+  })
+})
+
+describe('list page estimates (cursor UX)', () => {
+  it('estimates page count from total and page size', () => {
+    expect(estimateListPageCount(100, 25)).toBe(4)
+    expect(estimateListPageCount(101, 25)).toBe(5)
+    expect(estimateListPageCount(0, 25)).toBeNull()
+    expect(estimateListPageCount(50, 0)).toBeNull()
+  })
+  it('caps forward jump walks', () => {
+    expect(LIST_JUMP_MAX_WALK).toBe(50)
   })
 })

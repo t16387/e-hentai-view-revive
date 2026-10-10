@@ -109,5 +109,19 @@
   "Search.Tags": "标签",
   "Search.CatAll": "全部分类",
   "Search.CatNone": "清空分类",
-  "Search.EditFilters": "编辑筛选"
+  "Search.EditFilters": "编辑筛选",
+  "Search.AiFilter": "AI 生成",
+  "Search.AiAny": "包含 AI",
+  "Search.AiExclude": "排除 AI",
+  "Search.AiOnly": "仅 AI",
+  "List.Pagination": "画廊列表分页",
+  "List.Prev": "上一页",
+  "List.Next": "下一页",
+  "List.Page": "第 {{page}} 页",
+  "List.PageOf": "第 {{page}} / {{total}} 页",
+  "List.Jump": "跳转到页",
+  "List.Go": "跳转",
+  "List.JumpTooFar": "一次最多向前跳 50 页（站点使用游标分页，不是页码）。",
+  "List.JumpEnd": "已到最后一页。",
+  "List.JumpInvalid": "请输入 ≥ 1 的页码。"
 }

@@ -1,4 +1,4 @@
-import { SEARCH_LANGUAGES, SearchFilters } from '@/utils/search'
+import { AiFilterMode, SEARCH_LANGUAGES, SearchFilters } from '@/utils/search'
 import {
   Box,
   Checkbox,
@@ -72,7 +72,8 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
     value.f_sfl ||
     value.f_sfu ||
     value.f_sft ||
-    value.language
+    value.language ||
+    (value.ai && value.ai !== 'any')
   )
   const [open, setOpen] = useState(defaultOpen ?? autoOpen)
 
@@ -181,6 +182,24 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                   {l ? l : t('Search.AnyLanguage')}
                 </MenuItem>
               ))}
+            </Select>
+          </FormControl>
+        </Box>
+        <Box className={classes.row}>
+          <FormControl size="small" className={classes.select}>
+            <InputLabel id="ehv-ai-filter">{t('Search.AiFilter')}</InputLabel>
+            <Select
+              labelId="ehv-ai-filter"
+              label={t('Search.AiFilter')}
+              value={value.ai || 'any'}
+              onChange={(e) => {
+                const v = e.target.value as AiFilterMode
+                set({ ai: v === 'any' ? undefined : v })
+              }}
+            >
+              <MenuItem value="any">{t('Search.AiAny')}</MenuItem>
+              <MenuItem value="exclude">{t('Search.AiExclude')}</MenuItem>
+              <MenuItem value="only">{t('Search.AiOnly')}</MenuItem>
             </Select>
           </FormControl>
         </Box>
