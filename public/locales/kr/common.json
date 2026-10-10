@@ -131,5 +131,6 @@
   "Tag.SelectedCount": "{{count}}개 선택",
   "Search.Filters": "필터",
   "Search.AdvancedSheet": "고급 필터",
-  "Search.Categories": "카테고리"
+  "Search.Categories": "카테고리",
+  "Search.Done": "완료"
 }

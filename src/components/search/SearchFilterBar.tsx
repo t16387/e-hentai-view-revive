@@ -7,7 +7,8 @@ import {
   hideMaskToIncluded,
   searchHref,
 } from '@/utils/search'
-import { Box, Button, Chip } from '@mui/material'
+import { Box, Button, Chip, Container } from '@mui/material'
+import { alpha, Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
 import TuneIcon from '@mui/icons-material/Tune'
@@ -15,18 +16,38 @@ import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
 import React, { useMemo } from 'react'
 
-const useStyles = makeStyles((theme) =>
+const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
       paddingTop: theme.spacing(1),
       paddingBottom: theme.spacing(0.5),
+      maxWidth: 960,
+      marginLeft: 'auto',
+      marginRight: 'auto',
+      width: '100%',
     },
-    summary: {
+    rail: {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: theme.spacing(0.5),
+      gap: theme.spacing(0.75),
       alignItems: 'center',
-      marginBottom: theme.spacing(0.5),
+      marginBottom: theme.spacing(0.75),
+      padding: theme.spacing(0.75),
+      borderRadius: 12,
+      backgroundColor:
+        theme.palette.mode === 'dark'
+          ? alpha(theme.palette.common.white, 0.04)
+          : alpha(theme.palette.primary.main, 0.04),
+      border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
+    },
+    editBtn: {
+      minHeight: 40,
+      [theme.breakpoints.down('sm')]: {
+        minHeight: 44,
+      },
+      borderRadius: 999,
+      textTransform: 'none',
+      fontWeight: 600,
     },
   })
 )
@@ -71,10 +92,11 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   }
 
   return (
-    <Box className={classes.root}>
+    <Container maxWidth={false} disableGutters className={classes.root}>
       <CategoryChips
         included={included}
         showActions={false}
+        variant="compact"
         onChange={(inc) => {
           const hide = catsToHideMask(inc)
           push({
@@ -83,13 +105,16 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           })
         }}
       />
-      <Box className={classes.summary}>
+      <Box className={classes.rail}>
         {summary.map((s) => (
           <Chip key={s} size="small" label={s} />
         ))}
         <Button
           size="small"
+          className={classes.editBtn}
           startIcon={<TuneIcon />}
+          variant="contained"
+          color="primary"
           onClick={() =>
             router.push(searchHref(filters, '/search'), undefined, {
               shallow: false,
@@ -99,12 +124,17 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           {t('Search.EditFilters')}
         </Button>
         {(filtersKey(filters) || included !== CAT_ALL) && (
-          <Button size="small" onClick={() => push({})}>
+          <Button
+            size="small"
+            className={classes.editBtn}
+            variant="outlined"
+            onClick={() => push({})}
+          >
             {t('Search.Clear')}
           </Button>
         )}
       </Box>
-    </Box>
+    </Container>
   )
 }
 

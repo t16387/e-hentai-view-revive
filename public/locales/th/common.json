@@ -131,5 +131,6 @@
   "Tag.SelectedCount": "เลือก {{count}} รายการ",
   "Search.Filters": "ตัวกรอง",
   "Search.AdvancedSheet": "ตัวกรองขั้นสูง",
-  "Search.Categories": "หมวดหมู่"
+  "Search.Categories": "หมวดหมู่",
+  "Search.Done": "เสร็จ"
 }

@@ -131,5 +131,6 @@
   "Tag.SelectedCount": "{{count}} dipilih",
   "Search.Filters": "Penapis",
   "Search.AdvancedSheet": "Penapis lanjutan",
-  "Search.Categories": "Kategori"
+  "Search.Categories": "Kategori",
+  "Search.Done": "Selesai"
 }
