@@ -100,12 +100,7 @@ export default function useGalleryList(options: UseGalleryListOptions) {
         return
       }
       const target = Math.floor(page1Based) - 1
-      if (estimatedPages != null && target >= estimatedPages) {
-        // clamp to last estimated page
-        if (estimatedPages >= 1 && target > estimatedPages - 1) {
-          // still allow; site totals are approximate ("about N")
-        }
-      }
+      // Site totals are "about N"; do not hard-clamp jumps to estimatedPages.
       if (target < pageCountLoaded) {
         setViewPage(target)
         return
@@ -126,9 +121,7 @@ export default function useGalleryList(options: UseGalleryListOptions) {
         }
         while (loaded - 1 < target) {
           if (jumpGen.current !== gen) return
-          const prevPage = data?.[loaded - 1]
-          // When walking, rely on setSize to use the previous page's next
-          // from SWR cache (not the possibly-stale closure `data`).
+          // setSize appends using the previous page's next cursor from SWR.
           const pages = (await setSize(loaded + 1)) as
             | GalleriesPage[]
             | undefined
@@ -150,14 +143,13 @@ export default function useGalleryList(options: UseGalleryListOptions) {
             return
           }
           loaded = pages.length
-          void prevPage
         }
         if (jumpGen.current === gen) setViewPage(target)
       } finally {
         if (jumpGen.current === gen) setJumping(false)
       }
     },
-    [mode, estimatedPages, pageCountLoaded, setSize, data]
+    [mode, pageCountLoaded, setSize]
   )
 
   return {
