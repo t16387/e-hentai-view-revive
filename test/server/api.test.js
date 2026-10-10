@@ -275,3 +275,12 @@ describe('favorites / watched pagination through the API', () => {
     expect(sent).not.toMatch(/_ga|NEXT_LOCALE/)
   })
 })
+
+describe('request log hygiene', () => {
+  it('never logs the query string', async () => {
+    mockUpstream(async () => html(fixture('list-nohits.html')))
+    await get('/api/gallery?f_search=do-not-log-me')
+    expect(logs.join('\n')).not.toContain('do-not-log-me')
+    expect(logs.some((l) => l === 'GET -> /api/gallery')).toBe(true)
+  })
+})
