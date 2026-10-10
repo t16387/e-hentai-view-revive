@@ -13,6 +13,7 @@ import {
 import ExitToAppIcon from '@mui/icons-material/ExitToApp'
 import { useRouter } from 'next/router'
 import { axios } from '@/apis'
+import { LEGACY_COOKIE_STORAGE_KEY } from '@/widgets/signin/CookieLogin'
 import message from '@/components/message'
 import { useTranslation } from 'next-i18next'
 
@@ -22,6 +23,11 @@ const Logout = () => {
   const [t] = useTranslation()
   const logout = async () => {
     await axios.post('/api/user/logout')
+    try {
+      localStorage.removeItem(LEGACY_COOKIE_STORAGE_KEY)
+    } catch (_) {
+      /* private mode */
+    }
     message.success('logout success')
     router.push('/signin')
   }

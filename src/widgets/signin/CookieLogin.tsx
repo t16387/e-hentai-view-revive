@@ -7,6 +7,10 @@ import makeStyles from '@mui/styles/makeStyles'
 import { useTranslation } from 'next-i18next'
 import React, { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
+
+/** legacy key that used to store cookie login secrets in localStorage */
+export const LEGACY_COOKIE_STORAGE_KEY = 'cookie'
+
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     form: {
@@ -24,29 +28,48 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
   onSubmit,
 }) => {
   const classes = useStyles()
-  const { handleSubmit, setValue, control } = useForm<UserPayload>({})
+  const {
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<UserPayload>({
+    mode: 'onSubmit',
+    defaultValues: {
+      ipb_member_id: '',
+      ipb_pass_hash: '',
+      igneous: '',
+    },
+  })
   const [t] = useTranslation()
 
+  // never keep secrets in localStorage; clear any leftover from older builds
   useEffect(() => {
-    const v = localStorage.getItem('cookie')
-    if (v) {
-      Object.entries(JSON.parse(v) as UserPayload).forEach(([key, value]) =>
-        // @ts-ignore
-        setValue(key, value)
-      )
+    try {
+      localStorage.removeItem(LEGACY_COOKIE_STORAGE_KEY)
+    } catch (_) {
+      /* private mode */
     }
-  }, [setValue])
+  }, [])
+
   return (
     <form
       onSubmit={handleSubmit((v) => {
-        localStorage.setItem('cookie', JSON.stringify(v))
-        onSubmit(v)
+        onSubmit({
+          ipb_member_id: (v.ipb_member_id || '').trim(),
+          ipb_pass_hash: (v.ipb_pass_hash || '').trim(),
+          igneous: (v.igneous || '').trim() || undefined,
+        })
       })}
       className={classes.form}
+      noValidate
     >
       <Controller
         name="ipb_member_id"
         control={control}
+        rules={{
+          required: true,
+          validate: (v) => !!(v && String(v).trim()),
+        }}
         render={({ field }) => (
           <TextField
             margin="normal"
@@ -54,8 +77,12 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
             fullWidth
             id="ipb_member_id"
             label="ipb_member_id"
-            autoComplete="ipb_member_id"
+            autoComplete="off"
             autoFocus
+            error={!!errors.ipb_member_id}
+            helperText={
+              errors.ipb_member_id ? t('SignIn.RequiredField') : undefined
+            }
             {...field}
           />
         )}
@@ -64,6 +91,10 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
       <Controller
         name="ipb_pass_hash"
         control={control}
+        rules={{
+          required: true,
+          validate: (v) => !!(v && String(v).trim()),
+        }}
         render={({ field }) => (
           <TextField
             margin="normal"
@@ -71,6 +102,11 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
             fullWidth
             label="ipb_pass_hash"
             id="ipb_pass_hash"
+            autoComplete="off"
+            error={!!errors.ipb_pass_hash}
+            helperText={
+              errors.ipb_pass_hash ? t('SignIn.RequiredField') : undefined
+            }
             {...field}
           />
         )}
@@ -85,6 +121,7 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
             fullWidth
             label="igneous"
             id="igneous"
+            autoComplete="off"
             {...field}
           />
         )}
