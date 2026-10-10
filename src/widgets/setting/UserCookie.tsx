@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   ListItem,
   ListItemIcon,
@@ -14,10 +14,35 @@ import {
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import { useTranslation } from 'next-i18next'
 import message from '@/components/message'
+import { axios } from '@/apis'
 
 const UserCookie = () => {
   const [t] = useTranslation()
   const [open, setOpen] = useState(false)
+  const [cookies, setCookies] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    axios
+      .get<{ error: boolean; cookies: Record<string, string> }>(
+        '/api/user/cookies'
+      )
+      .then((res) => {
+        if (!cancelled && res.data && res.data.cookies) {
+          setCookies(res.data.cookies)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCookies({})
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+
+  const lines = Object.entries(cookies).map(([k, v]) => `${k}: ${v}`)
+
   return (
     <>
       <ListItem button onClick={() => setOpen(true)}>
@@ -32,21 +57,28 @@ const UserCookie = () => {
           <DialogContentText color="secondary" variant="h6">
             {t('EH.KeepItSafe')}
           </DialogContentText>
-          {typeof window !== 'undefined' &&
-            document.cookie.split(';').map((t) => (
-              <DialogContentText key={t}>
+          {lines.length === 0 ? (
+            <DialogContentText>
+              <Typography component="span" variant="body2">
+                —
+              </Typography>
+            </DialogContentText>
+          ) : (
+            lines.map((line) => (
+              <DialogContentText key={line}>
                 <Typography component="span" variant="body2">
-                  {t.replace('=', ': ')}
+                  {line}
                 </Typography>
               </DialogContentText>
-            ))}
+            ))
+          )}
         </DialogContent>
         <DialogActions>
           <Button
             color="primary"
             onClick={() => {
               setOpen(false)
-              copy(document.cookie.replace(/=/g, ': ').replace(/;\s?/g, '\n'))
+              copy(lines.join('\n'))
             }}
           >
             {t('Copy')}
