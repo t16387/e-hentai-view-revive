@@ -1,36 +1,40 @@
+import SearchFilterBar from '@/components/search/SearchFilterBar'
 import Layout from '@/components/Layout'
 import GalleryList from '@/components/GalleryList'
 import { IconButton } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import { filtersKey, readSearchFilters } from '@/utils/search'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from 'next/router'
 import React from 'react'
-import { readQueryString } from '@/utils/search'
 
 const Result = () => {
   const router = useRouter()
-
-  const f_search = readQueryString(router.query.f_search)
+  const filters = readSearchFilters(router.query)
+  const key = filtersKey(filters)
+  const title = filters.f_search || filters.language || 'Search'
 
   return (
     <Layout
-      title={f_search}
+      title={title}
       showBack
       tool={
         <>
-          <IconButton onClick={() => router.push('/search')} size="large">
+          <IconButton
+            onClick={() => router.push('/search')}
+            size="large"
+            aria-label="edit search"
+          >
             <CloseIcon />
           </IconButton>
-          {/* <IconButton edge="end">
-            <TuneIcon />
-          </IconButton> */}
         </>
       }
     >
-      {/* wait for the query on statically optimised pages instead of
-          searching for "undefined" */}
       {router.isReady && (
-        <GalleryList key={f_search} mode="index" f_search={f_search} />
+        <>
+          <SearchFilterBar filters={filters} path="/result" />
+          <GalleryList key={key || 'result'} mode="index" {...filters} />
+        </>
       )}
     </Layout>
   )

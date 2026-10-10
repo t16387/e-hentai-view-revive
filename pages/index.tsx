@@ -1,18 +1,23 @@
+import SearchFilterBar from '@/components/search/SearchFilterBar'
+import Layout from '@/components/Layout'
+import GalleryList from '@/components/GalleryList'
+import { filtersKey, readSearchFilters } from '@/utils/search'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from 'next/router'
 import React from 'react'
-import Layout from '../src/components/Layout'
-import GalleryList from '@/components/GalleryList'
-import { readQueryString } from '@/utils/search'
 
 const IndexPage = () => {
   const router = useRouter()
-  const f_search = readQueryString(router.query.f_search)
+  const filters = readSearchFilters(router.query)
+  const key = filtersKey(filters)
 
   return (
     <Layout showAvatar showSearch>
       {router.isReady && (
-        <GalleryList key={f_search} mode="index" f_search={f_search} />
+        <>
+          <SearchFilterBar filters={filters} path="/" />
+          <GalleryList key={key || 'home'} mode="index" {...filters} />
+        </>
       )}
     </Layout>
   )

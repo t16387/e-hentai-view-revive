@@ -9,7 +9,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import clsx from 'clsx'
 import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
-import { readQueryString, searchHref } from '@/utils/search'
+import { readSearchFilters, searchHref } from '@/utils/search'
 import React, { HtmlHTMLAttributes, useEffect, useState } from 'react'
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -61,7 +61,6 @@ const useStyles = makeStyles((theme: Theme) =>
     inputFocus: { width: 'calc(100% - 80px)' },
     inputInput: {
       padding: theme.spacing(1, 1, 1, 0),
-      // vertical padding + font size from searchIcon
       paddingLeft: `calc(1em + ${theme.spacing(4)})`,
     },
 
@@ -79,20 +78,22 @@ const useStyles = makeStyles((theme: Theme) =>
 const SearchBar: React.FC<HtmlHTMLAttributes<HTMLDivElement>> = (props) => {
   const classes = useStyles()
   const router = useRouter()
-  const f_search = readQueryString(router.query.f_search)
-  const [search, setSearch] = useState(f_search)
+  const base = readSearchFilters(router.query)
+  const [search, setSearch] = useState(base.f_search || '')
   const [isFocus, ref] = useFocus<HTMLInputElement>()
   const [t] = useTranslation()
   useEffect(() => {
-    setSearch(f_search)
-  }, [f_search])
+    setSearch(base.f_search || '')
+  }, [base.f_search])
 
   const onSearch = () => {
     if (search.length < 3 && search.length > 0)
       return message.error(t('Search.Short'), 1500)
-    router.push(searchHref(search, '/'), undefined, {
-      shallow: true,
-    })
+    router.push(
+      searchHref({ ...base, f_search: search || undefined }, '/'),
+      undefined,
+      { shallow: true }
+    )
   }
 
   return (

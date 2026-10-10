@@ -1,24 +1,23 @@
 import { axios } from '@/apis'
 import { GalleriesPage } from '@/interface/gallery'
-import { galleryListKey, GalleryListMode } from '@/utils/search'
+import { GalleryListMode, SearchFilters, galleryListKey } from '@/utils/search'
 import { useEffect } from 'react'
 import { useSWRInfinite } from 'swr'
 import useInViewportWithDistance from './useInViewportWithDistance'
 
-export interface UseGalleryListOptions {
-  f_search?: string
+export interface UseGalleryListOptions extends SearchFilters {
   mode: GalleryListMode
-  favcat?: string
 }
+
 export default function useGalleryList<T extends HTMLElement = HTMLDivElement>(
   options: UseGalleryListOptions
 ) {
-  const { mode, f_search, favcat } = options
+  const { mode, ...filters } = options
   const [inview, inviewRef] = useInViewportWithDistance<T>(600)
   // cursor pagination: each key is derived from the previous page's `next`
   const { data, error, size, setSize } = useSWRInfinite<GalleriesPage>(
     (pageIndex, previous: GalleriesPage | null) =>
-      galleryListKey(mode, { f_search, favcat }, pageIndex, previous),
+      galleryListKey(mode, filters, pageIndex, previous),
     async (url: string) => {
       const res = await axios.get<GalleriesPage>(url)
       if (res.data.error) throw res.data.message
@@ -35,7 +34,6 @@ export default function useGalleryList<T extends HTMLElement = HTMLDivElement>(
   const lastPage = data ? data[data.length - 1] : undefined
   const isReachingEnd =
     isEmpty || mode === 'popular' || (!!lastPage && !lastPage.next)
-  // const isRefreshing = isValidating && data && data.length === size
 
   useEffect(() => {
     if (inview && !isLoadingMore && !isReachingEnd) setSize((size) => size + 1)
