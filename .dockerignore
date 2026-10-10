@@ -5,5 +5,10 @@
 .next
 node_modules
 coverage
-Dockerfile
 *.log
+.env
+.env.*
+!.env.example
+**/ehv-exh.env
+**/*cookie*
+**/*secret*
