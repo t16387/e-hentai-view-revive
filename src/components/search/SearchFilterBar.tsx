@@ -1,4 +1,5 @@
 import CategoryChips from '@/components/search/CategoryChips'
+import { V4 } from '@/design/v4Tokens'
 import {
   CAT_ALL,
   SearchFilters,
@@ -16,8 +17,13 @@ import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
 import React, { useMemo } from 'react'
 
-const useStyles = makeStyles((theme: Theme) =>
-  createStyles({
+const useStyles = makeStyles((theme: Theme) => {
+  const dark = theme.palette.mode === 'dark'
+  const primary = dark ? V4.primary : V4.light.primary
+  const card = dark ? V4.card : V4.light.card
+  const border = dark ? V4.border : V4.light.border
+  const ring = dark ? V4.ring : V4.light.ring
+  return createStyles({
     root: {
       paddingTop: theme.spacing(1),
       paddingBottom: theme.spacing(0.5),
@@ -29,28 +35,54 @@ const useStyles = makeStyles((theme: Theme) =>
     rail: {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: theme.spacing(0.75),
+      gap: theme.spacing(1),
       alignItems: 'center',
       marginBottom: theme.spacing(0.75),
-      padding: theme.spacing(0.75),
-      borderRadius: 12,
-      backgroundColor:
-        theme.palette.mode === 'dark'
-          ? alpha(theme.palette.common.white, 0.04)
-          : alpha(theme.palette.primary.main, 0.04),
-      border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
+      padding: theme.spacing(1),
+      borderRadius: 8,
+      backgroundColor: dark
+        ? alpha(V4.muted, 0.55)
+        : alpha(V4.light.muted, 0.95),
+      border: `1px solid ${alpha(border, dark ? 0.7 : 1)}`,
     },
     editBtn: {
-      minHeight: 40,
-      [theme.breakpoints.down('sm')]: {
-        minHeight: 44,
-      },
-      borderRadius: 999,
+      minHeight: 44,
+      borderRadius: 8,
       textTransform: 'none',
       fontWeight: 600,
+      fontFamily: 'Inter, sans-serif',
+      cursor: 'pointer',
+      transition: 'background-color 200ms ease, border-color 200ms ease',
+      '&:focus-visible': {
+        outline: `2px solid ${ring}`,
+        outlineOffset: 2,
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        transition: 'none',
+      },
+    },
+    clearBtn: {
+      minHeight: 44,
+      borderRadius: 8,
+      textTransform: 'none',
+      fontWeight: 600,
+      fontFamily: 'Inter, sans-serif',
+      cursor: 'pointer',
+      borderColor: alpha(primary, 0.5),
+      color: primary,
+      '&:focus-visible': {
+        outline: `2px solid ${ring}`,
+        outlineOffset: 2,
+      },
+    },
+    summaryChip: {
+      borderRadius: 8,
+      fontFamily: 'Inter, sans-serif',
+      backgroundColor: dark ? alpha(card, 0.8) : card,
+      border: `1px solid ${alpha(border, 0.6)}`,
     },
   })
-)
+})
 
 export interface SearchFilterBarProps {
   filters: SearchFilters
@@ -105,9 +137,14 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           })
         }}
       />
-      <Box className={classes.rail}>
+      <Box className={classes.rail} data-filter-rail="ehv-v4">
         {summary.map((s) => (
-          <Chip key={s} size="small" label={s} />
+          <Chip
+            key={s}
+            size="small"
+            label={s}
+            className={classes.summaryChip}
+          />
         ))}
         <Button
           size="small"
@@ -126,7 +163,7 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
         {(filtersKey(filters) || included !== CAT_ALL) && (
           <Button
             size="small"
-            className={classes.editBtn}
+            className={classes.clearBtn}
             variant="outlined"
             onClick={() => push({})}
           >

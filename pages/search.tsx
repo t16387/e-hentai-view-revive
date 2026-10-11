@@ -1,4 +1,5 @@
 import AdvancedSearch from '@/components/search/AdvancedSearch'
+import { V4 } from '@/design/v4Tokens'
 import CategoryChips from '@/components/search/CategoryChips'
 import { LOCAL_SEARCH_HISTORY } from '@/constant'
 import useEnhanceLocalStorageState from '@/hooks/useEnhanceLocalStorageState'
@@ -42,12 +43,18 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from 'next/router'
 import React, { useEffect, useRef, useState } from 'react'
 
-const useStyles = makeStyles((theme: Theme) =>
-  createStyles({
+const useStyles = makeStyles((theme: Theme) => {
+  const dark = theme.palette.mode === 'dark'
+  const primary = dark ? V4.primary : V4.light.primary
+  const card = dark ? V4.card : V4.light.card
+  const border = dark ? V4.border : V4.light.border
+  const ring = dark ? V4.ring : V4.light.ring
+  return createStyles({
     formroot: { flex: 1 },
     input: {
       fontSize: '1.25rem',
       width: '100%',
+      fontFamily: 'Inter, sans-serif',
       '& ::-webkit-search-cancel-button': {
         '-webkit-appearance': 'none',
       },
@@ -70,13 +77,13 @@ const useStyles = makeStyles((theme: Theme) =>
       paddingBottom: `calc(${theme.spacing(
         1.25
       )} + env(safe-area-inset-bottom, 0px))`,
-      backgroundColor: alpha(
-        theme.palette.background.paper,
-        theme.palette.mode === 'dark' ? 0.92 : 0.96
-      ),
-      backdropFilter: 'blur(8px)',
-      borderTop: `1px solid ${theme.palette.divider}`,
+      backgroundColor: alpha(card, dark ? 0.94 : 0.97),
+      backdropFilter: 'blur(10px)',
+      borderTop: `1px solid ${alpha(border, dark ? 0.75 : 1)}`,
       justifyContent: 'center',
+      '@media (prefers-reduced-motion: reduce)': {
+        backdropFilter: 'none',
+      },
     },
     stickyInner: {
       display: 'flex',
@@ -87,40 +94,77 @@ const useStyles = makeStyles((theme: Theme) =>
     applyBtn: {
       flex: 1,
       minHeight: 48,
-      borderRadius: 12,
+      borderRadius: 8,
       fontWeight: 700,
       textTransform: 'none',
       fontSize: '1rem',
+      fontFamily: 'Inter, sans-serif',
+      cursor: 'pointer',
+      backgroundColor: V4.accent,
+      color: V4.onAccent,
+      boxShadow: 'none',
+      transition: 'background-color 200ms ease, opacity 200ms ease',
+      '&:hover': {
+        backgroundColor: '#F59E0B',
+      },
+      '&:focus-visible': {
+        outline: `2px solid ${ring}`,
+        outlineOffset: 2,
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        transition: 'none',
+      },
     },
     clearBtn: {
       minHeight: 48,
       minWidth: 96,
-      borderRadius: 12,
+      borderRadius: 8,
       textTransform: 'none',
       fontWeight: 600,
+      fontFamily: 'Inter, sans-serif',
+      cursor: 'pointer',
+      borderColor: alpha(primary, 0.55),
+      color: primary,
+      transition: 'background-color 200ms ease, border-color 200ms ease',
+      '&:focus-visible': {
+        outline: `2px solid ${ring}`,
+        outlineOffset: 2,
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        transition: 'none',
+      },
     },
     advancedBtn: {
       minHeight: 44,
-      borderRadius: 999,
+      borderRadius: 8,
       textTransform: 'none',
       fontWeight: 600,
+      fontFamily: 'Inter, sans-serif',
+      cursor: 'pointer',
       marginBottom: theme.spacing(1.5),
+      borderColor: alpha(primary, 0.45),
+      '&:focus-visible': {
+        outline: `2px solid ${ring}`,
+        outlineOffset: 2,
+      },
     },
     drawerPaper: {
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16,
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
       maxHeight: '85vh',
       padding: theme.spacing(2),
       paddingBottom: `calc(${theme.spacing(
         2
       )} + env(safe-area-inset-bottom, 0px))`,
+      backgroundColor: card,
     },
     drawerTitle: {
       fontWeight: 700,
+      fontFamily: 'Inter, sans-serif',
       marginBottom: theme.spacing(1),
     },
   })
-)
+})
 
 const emptyFilters = (): SearchFilters => ({})
 
@@ -283,7 +327,7 @@ const Search = () => {
         </List>
       </Container>
 
-      <Box className={classes.stickyBar}>
+      <Box className={classes.stickyBar} data-filter-actions="ehv-v4">
         <Box className={classes.stickyInner}>
           <Button
             className={classes.clearBtn}
