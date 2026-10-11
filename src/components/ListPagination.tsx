@@ -10,8 +10,13 @@ import React, { useEffect, useState } from 'react'
 
 /**
  * UI V4 pager — Cyberpunk tokens + Minimal/Swiss discipline.
- * Replaces the V3 teal/amber viewfinder strip. Semantics unchanged.
+ * Single surface: nav strip + jump row share padding, gap, and control height.
  */
+
+const H = V4.control.height
+const HN = V4.control.heightNav
+const R = V4.control.radius
+const G = V4.control.gap
 
 const useStyles = makeStyles((theme: Theme) => {
   const dark = theme.palette.mode === 'dark'
@@ -25,29 +30,29 @@ const useStyles = makeStyles((theme: Theme) => {
     root: {
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'center',
-      gap: theme.spacing(1.25),
-      padding: theme.spacing(1.5, 1),
+      alignItems: 'stretch',
+      gap: G,
+      padding: theme.spacing(1.25),
       width: '100%',
       maxWidth: 480,
       marginLeft: 'auto',
       marginRight: 'auto',
+      borderRadius: R,
+      background: dark ? alpha(V4.muted, 0.55) : alpha(V4.light.muted, 0.95),
+      border: `1px solid ${alpha(border, dark ? 0.7 : 1)}`,
+      boxSizing: 'border-box',
     },
     strip: {
       display: 'grid',
-      gridTemplateColumns: '48px 1fr 48px',
+      gridTemplateColumns: `${HN}px 1fr ${HN}px`,
       alignItems: 'center',
-      gap: theme.spacing(1),
+      gap: G,
       width: '100%',
-      padding: theme.spacing(0.75),
-      borderRadius: 8,
-      background: dark ? alpha(V4.muted, 0.65) : alpha(V4.light.muted, 0.95),
-      border: `1px solid ${alpha(border, dark ? 0.7 : 1)}`,
     },
     navBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: 8,
+      width: HN,
+      height: HN,
+      borderRadius: R,
       backgroundColor: primary,
       color: dark ? V4.foreground : '#fff',
       cursor: 'pointer',
@@ -72,9 +77,11 @@ const useStyles = makeStyles((theme: Theme) => {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 48,
-      padding: theme.spacing(0.5, 1.25),
-      borderRadius: 8,
+      boxSizing: 'border-box',
+      height: HN,
+      minHeight: HN,
+      padding: theme.spacing(0, 1.25),
+      borderRadius: R,
       border: `1px solid ${alpha(border, 0.9)}`,
       background: card,
     },
@@ -90,17 +97,20 @@ const useStyles = makeStyles((theme: Theme) => {
       whiteSpace: 'nowrap',
     },
     jump: {
-      display: 'inline-flex',
+      display: 'flex',
       alignItems: 'center',
-      gap: theme.spacing(1),
-      flexWrap: 'wrap',
       justifyContent: 'center',
+      gap: G,
+      flexWrap: 'wrap',
+      width: '100%',
     },
     field: {
-      width: 88,
+      width: 96,
       '& .MuiOutlinedInput-root': {
-        borderRadius: 8,
-        minHeight: 44,
+        boxSizing: 'border-box',
+        borderRadius: R,
+        height: H,
+        minHeight: H,
         fontFamily: 'Inter, sans-serif',
         backgroundColor: card,
         '&:hover .MuiOutlinedInput-notchedOutline': {
@@ -111,11 +121,18 @@ const useStyles = makeStyles((theme: Theme) => {
           borderWidth: 2,
         },
       },
+      '& .MuiOutlinedInput-input': {
+        paddingTop: 10,
+        paddingBottom: 10,
+        textAlign: 'center',
+      },
     },
     go: {
-      minHeight: 44,
-      minWidth: 64,
-      borderRadius: 8,
+      boxSizing: 'border-box',
+      height: H,
+      minHeight: H,
+      minWidth: 72,
+      borderRadius: R,
       fontWeight: 700,
       letterSpacing: 0.4,
       textTransform: 'none',
@@ -143,6 +160,7 @@ const useStyles = makeStyles((theme: Theme) => {
       width: '100%',
       textAlign: 'center',
       color: mutedFg,
+      marginTop: 0,
     },
   })
 })

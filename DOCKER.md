@@ -71,6 +71,17 @@ Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Docker
 
 If upstream is blocked on your network, set `EHV_PROXY` to your local proxy. On Docker Desktop, `host.docker.internal` reaches the host (e.g. `http://host.docker.internal:7890`).
 
+## Windows native (Node, no Docker)
+
+If you already have Node ≥20 and a built tree (or are developing):
+
+| File | Mode | What it does |
+|------|------|----------------|
+| `start.bat` | production | Sets `EHV_SITE=exhentai`, `NODE_ENV=production`, `PORT=3000`, then `node server\src\server.js`. Does **not** use `pnpm start` / cross-env (those can exit silently on some PCs). Needs `.next` from `pnpm build`. |
+| `dev.bat` | development | Sets `EHV_SITE=exhentai`, `NODE_ENV=development`. Opens API on **:8080** (`nodemon server\src\app.js`, same as `dev:server`) and Next on **:3000** (`node server\src\server.js`, same as `dev:app`). Browse **http://localhost:3000**. |
+
+Double-click from the project root (or run from `cmd`). Prefer Docker load+compose when you do not want a local Node toolchain.
+
 ## Image details
 
 - Multi-stage `Dockerfile` (Node 22 Alpine, pnpm, Next build).

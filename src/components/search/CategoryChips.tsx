@@ -14,6 +14,10 @@ import makeStyles from '@mui/styles/makeStyles'
 import { useTranslation } from 'next-i18next'
 import React from 'react'
 
+const H = V4.control.height
+const R = V4.control.radius
+const G = V4.control.gap
+
 const useStyles = makeStyles((theme: Theme) => {
   const dark = theme.palette.mode === 'dark'
   const primary = dark ? V4.primary : V4.light.primary
@@ -39,14 +43,14 @@ const useStyles = makeStyles((theme: Theme) => {
     },
     actions: {
       display: 'inline-flex',
-      gap: theme.spacing(1),
+      gap: G,
     },
     actionBtn: {
-      minHeight: 44,
+      minHeight: H,
       minWidth: 72,
       padding: theme.spacing(0.75, 1.5),
       textTransform: 'none',
-      borderRadius: 8,
+      borderRadius: R,
       fontWeight: 600,
       fontFamily: 'Inter, sans-serif',
       cursor: 'pointer',
@@ -62,11 +66,11 @@ const useStyles = makeStyles((theme: Theme) => {
         transition: 'none',
       },
     },
-    /** Wrap grid — phone 2-col, tablet 3-col, desktop 5-col. No clipped labels. */
+    /** Wrap grid — phone 2-col, tablet 3-col, desktop 5-col. Equal tile height. */
     grid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-      gap: theme.spacing(1),
+      gap: G,
       marginBottom: theme.spacing(1.5),
       [theme.breakpoints.up('sm')]: {
         gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
@@ -80,16 +84,18 @@ const useStyles = makeStyles((theme: Theme) => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 44,
-      borderRadius: 8,
-      padding: theme.spacing(0.75, 1),
+      boxSizing: 'border-box',
+      height: H,
+      minHeight: H,
+      borderRadius: R,
+      padding: theme.spacing(0, 1),
       cursor: 'pointer',
-      border: `1px solid ${alpha(border, dark ? 0.85 : 1)}`,
+      border: `1.5px solid ${alpha(border, dark ? 0.85 : 1)}`,
       backgroundColor: dark
         ? alpha(V4.muted, 0.55)
         : alpha(V4.light.muted, 0.9),
       transition:
-        'background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease',
+        'background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease, filter 200ms ease',
       '&:hover': {
         borderColor: alpha(primary, 0.65),
         backgroundColor: dark ? alpha(primary, 0.12) : alpha(primary, 0.06),
@@ -104,11 +110,15 @@ const useStyles = makeStyles((theme: Theme) => {
     },
     tileOn: {
       borderColor: primary,
-      boxShadow: `inset 0 0 0 1px ${primary}`,
-      backgroundColor: dark ? alpha(primary, 0.18) : alpha(primary, 0.1),
+      borderWidth: 2,
+      boxShadow: `inset 0 0 0 1px ${alpha(primary, 0.55)}`,
+      backgroundColor: dark ? alpha(primary, 0.2) : alpha(primary, 0.12),
+      opacity: 1,
+      filter: 'none',
     },
     tileOff: {
-      opacity: 0.55,
+      opacity: 0.5,
+      filter: 'saturate(0.65)',
     },
     chipLabel: {
       pointerEvents: 'none',
@@ -116,24 +126,46 @@ const useStyles = makeStyles((theme: Theme) => {
       whiteSpace: 'nowrap',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
+      // Flatten nested Chip height so tiles stay even
+      '&&': {
+        height: 28,
+        minHeight: 28,
+      },
     },
-    /** Compact horizontal wrap for index/result chrome. */
+    /** Compact horizontal wrap for index/result chrome — equal height pills. */
     compact: {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: theme.spacing(1),
+      alignItems: 'center',
+      gap: G,
       marginBottom: theme.spacing(1),
     },
     compactChip: {
       cursor: 'pointer',
+      boxSizing: 'border-box',
       '&&': {
-        minHeight: 44,
-        height: 44,
+        height: H,
+        minHeight: H,
+        maxHeight: H,
+        borderRadius: R,
+        border: `2px solid transparent`,
+        paddingLeft: V4.control.padX,
+        paddingRight: V4.control.padX,
       },
-      borderRadius: 8,
       fontFamily: 'Inter, sans-serif',
       fontWeight: 600,
-      transition: 'opacity 200ms ease, box-shadow 200ms ease',
+      fontSize: '0.8125rem',
+      letterSpacing: 0.15,
+      transition:
+        'opacity 200ms ease, box-shadow 200ms ease, border-color 200ms ease, filter 200ms ease',
+      '& .MuiChip-label': {
+        paddingLeft: 0,
+        paddingRight: 0,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        maxWidth: '11rem',
+      },
       '&:focus-visible': {
         outline: `2px solid ${ring}`,
         outlineOffset: 2,
@@ -143,10 +175,18 @@ const useStyles = makeStyles((theme: Theme) => {
       },
     },
     compactOn: {
-      boxShadow: `0 0 0 2px ${primary}`,
+      opacity: 1,
+      filter: 'none',
+      borderColor: `${primary} !important`,
+      boxShadow: `0 0 0 1px ${alpha(primary, 0.35)}, 0 0 12px ${alpha(
+        primary,
+        0.25
+      )}`,
     },
     compactOff: {
-      opacity: 0.42,
+      opacity: 0.4,
+      filter: 'saturate(0.55) brightness(0.92)',
+      boxShadow: 'none',
     },
   })
 })
@@ -183,6 +223,7 @@ const CategoryChips: React.FC<CategoryChipsProps> = ({
         className={classes.compact}
         role="group"
         aria-label={t('Search.Categories') as string}
+        data-cat-row="ehv-v4"
       >
         {CAT_KEYS.map((key) => {
           const on = isCatIncluded(included, key)
@@ -190,12 +231,13 @@ const CategoryChips: React.FC<CategoryChipsProps> = ({
             <ColorChip
               key={key}
               label={CAT_LABEL[key]}
-              size="small"
+              size="medium"
               className={`${classes.compactChip}${
                 on ? ` ${classes.compactOn}` : ` ${classes.compactOff}`
               }`}
               onClick={() => toggle(key)}
               aria-pressed={on}
+              title={CAT_LABEL[key]}
               data-cat={key}
               data-included={on ? '1' : '0'}
             />
@@ -236,6 +278,7 @@ const CategoryChips: React.FC<CategoryChipsProps> = ({
         className={classes.grid}
         role="group"
         aria-label={t('Search.Categories') as string}
+        data-cat-deck="ehv-v4"
       >
         {CAT_KEYS.map((key) => {
           const on = isCatIncluded(included, key)
@@ -256,6 +299,7 @@ const CategoryChips: React.FC<CategoryChipsProps> = ({
                 size="small"
                 className={classes.chipLabel}
                 style={{ pointerEvents: 'none', maxWidth: '100%' }}
+                title={CAT_LABEL[key]}
               />
             </ButtonBase>
           )

@@ -18,7 +18,10 @@
 
 ### Spacing Overrides
 
-- No overrides — use Master spacing
+- Control rhythm (Swiss): chips, Edit filters, and pager jump share `V4.control.height` (44px), `radius` 8, `gap` 8 — see `src/design/v4Tokens.ts`
+- Category row: wrap with equal-height pills; selected = purple border + soft glow; unselected = dim + desaturate (no layout shift)
+- Pager: one surface containing nav strip + jump row (8px gap); nav buttons 48px
+
 
 ### Typography Overrides
 
@@ -33,6 +36,9 @@
 - Avoid: Force all chips into one clipped row or hide overflow values
 - Avoid: Div soup with no semantics
 - Avoid: Large blocking CSS files
+- Avoid: Filled primary “chip-like” Edit button that fights category color pills — use outlined / tinted control at the same height
+- Avoid: Nested pager chrome (strip card inside another card) with mismatched control heights
+
 
 ---
 

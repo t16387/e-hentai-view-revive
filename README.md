@@ -56,6 +56,11 @@ yarn run dev:server
 yarn run dev:app
 ```
 
+### Windows runners (no cross-env)
+
+- `dev.bat` — local Next + API (`EHV_SITE=exhentai`). Browse http://localhost:3000
+- `start.bat` — production after `pnpm build` (`PORT=3000`). Prefer Docker on notebooks; see [DOCKER.md](DOCKER.md)
+
 ## Thanks
 
 - [seven332/EhViewer](https://github.com/seven332/EhViewer)

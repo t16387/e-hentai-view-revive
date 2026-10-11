@@ -19,6 +19,14 @@ export const V4 = {
   border: '#4C1D95',
   ring: '#8B5CF6',
   destructive: '#EF4444',
+  /** Shared control metrics — keep pills, Edit, pager nav at one rhythm. */
+  control: {
+    height: 44,
+    heightNav: 48,
+    radius: 8,
+    gap: 8,
+    padX: 12,
+  },
   /** Light-mode adaptations (still purple/gold accent, not teal). */
   light: {
     primary: '#7C3AED',

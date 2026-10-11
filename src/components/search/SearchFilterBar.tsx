@@ -17,12 +17,17 @@ import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
 import React, { useMemo } from 'react'
 
+const H = V4.control.height
+const R = V4.control.radius
+const G = V4.control.gap
+
 const useStyles = makeStyles((theme: Theme) => {
   const dark = theme.palette.mode === 'dark'
   const primary = dark ? V4.primary : V4.light.primary
   const card = dark ? V4.card : V4.light.card
   const border = dark ? V4.border : V4.light.border
   const ring = dark ? V4.ring : V4.light.ring
+  const fg = dark ? V4.foreground : V4.light.foreground
   return createStyles({
     root: {
       paddingTop: theme.spacing(1),
@@ -35,35 +40,63 @@ const useStyles = makeStyles((theme: Theme) => {
     rail: {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: theme.spacing(1),
+      gap: G,
       alignItems: 'center',
       marginBottom: theme.spacing(0.75),
       padding: theme.spacing(1),
-      borderRadius: 8,
+      borderRadius: R,
       backgroundColor: dark
         ? alpha(V4.muted, 0.55)
         : alpha(V4.light.muted, 0.95),
       border: `1px solid ${alpha(border, dark ? 0.7 : 1)}`,
+      minHeight: H + 16,
     },
+    /** Edit filters — outlined control, same height as category pills (not a filled chip). */
     editBtn: {
-      minHeight: 44,
-      borderRadius: 8,
+      boxSizing: 'border-box',
+      height: H,
+      minHeight: H,
+      maxHeight: H,
+      borderRadius: R,
+      paddingLeft: V4.control.padX + 4,
+      paddingRight: V4.control.padX + 4,
       textTransform: 'none',
       fontWeight: 600,
+      fontSize: '0.875rem',
       fontFamily: 'Inter, sans-serif',
+      letterSpacing: 0.2,
       cursor: 'pointer',
-      transition: 'background-color 200ms ease, border-color 200ms ease',
+      color: fg,
+      backgroundColor: dark ? alpha(primary, 0.16) : alpha(primary, 0.1),
+      border: `1.5px solid ${primary}`,
+      boxShadow: 'none',
+      transition:
+        'background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease',
+      '&:hover': {
+        backgroundColor: dark ? alpha(primary, 0.28) : alpha(primary, 0.18),
+        borderColor: dark ? V4.primaryMuted : primary,
+        boxShadow: `0 0 0 1px ${alpha(primary, 0.35)}`,
+      },
       '&:focus-visible': {
         outline: `2px solid ${ring}`,
         outlineOffset: 2,
+      },
+      '& .MuiButton-startIcon': {
+        marginRight: 6,
+        color: primary,
       },
       '@media (prefers-reduced-motion: reduce)': {
         transition: 'none',
       },
     },
     clearBtn: {
-      minHeight: 44,
-      borderRadius: 8,
+      boxSizing: 'border-box',
+      height: H,
+      minHeight: H,
+      maxHeight: H,
+      borderRadius: R,
+      paddingLeft: V4.control.padX,
+      paddingRight: V4.control.padX,
       textTransform: 'none',
       fontWeight: 600,
       fontFamily: 'Inter, sans-serif',
@@ -76,7 +109,8 @@ const useStyles = makeStyles((theme: Theme) => {
       },
     },
     summaryChip: {
-      borderRadius: 8,
+      height: 32,
+      borderRadius: R,
       fontFamily: 'Inter, sans-serif',
       backgroundColor: dark ? alpha(card, 0.8) : card,
       border: `1px solid ${alpha(border, 0.6)}`,
@@ -147,22 +181,21 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           />
         ))}
         <Button
-          size="small"
           className={classes.editBtn}
-          startIcon={<TuneIcon />}
-          variant="contained"
-          color="primary"
+          startIcon={<TuneIcon fontSize="small" />}
+          variant="outlined"
+          disableElevation
           onClick={() =>
             router.push(searchHref(filters, '/search'), undefined, {
               shallow: false,
             })
           }
+          data-edit-filters="ehv-v4"
         >
           {t('Search.EditFilters')}
         </Button>
         {(filtersKey(filters) || included !== CAT_ALL) && (
           <Button
-            size="small"
             className={classes.clearBtn}
             variant="outlined"
             onClick={() => push({})}
