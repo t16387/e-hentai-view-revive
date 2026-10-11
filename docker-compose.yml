@@ -1,7 +1,11 @@
 # Run EhentaiView without installing Node/pnpm on the host.
-# Usage (Linux/macOS/Windows Docker Desktop):
-#   cp .env.example .env   # edit EHV_SITE / EHV_PROXY as needed
-#   docker compose up --build
+# Preferred (Windows / no local build):
+#   docker load -i ehentai-view-revive.tar.gz   # tag: ehentai-view:revive
+#   cp .env.example .env
+#   docker compose up -d                        # do NOT pass --build
+# Lab/server rebuild only:
+#   sudo docker compose build
+#   sudo docker save ehentai-view:revive | gzip > ehentai-view-revive.tar.gz
 # Then open http://localhost:3000
 #
 # Compose auto-reads `.env` for ${VAR} substitution. Cookies: sign in through

@@ -1,18 +1,45 @@
 # Running with Docker Compose
 
-You do not need Node or pnpm on the notebook. Docker builds the image and runs the production server.
+You do **not** need Node or pnpm on the notebook. Prefer a **pre-built image** (load from tar) so Windows never runs `docker compose build`.
 
-## Quick start
+## Quick start (pre-built image — recommended on Windows)
+
+1. Copy `ehentai-view-revive.tar.gz` next to this project (or extract `ehv-source-latest.zip` which includes Compose files).
+2. Load the image (PowerShell or bash):
+
+```bash
+# Linux / macOS / Git Bash
+gunzip -c ehentai-view-revive.tar.gz | docker load
+
+# PowerShell (Docker Desktop)
+docker load -i ehentai-view-revive.tar.gz
+```
+
+3. Configure env and start **without** `--build`:
 
 ```bash
 cp .env.example .env
 # edit .env if you want ExHentai (EHV_SITE=exhentai) or a proxy
-docker compose up --build
+docker compose up -d
 ```
 
 Open **http://localhost:3000** (or the port in `EHV_HOST_PORT`).
 
-Stop: `Ctrl+C` or `docker compose down`.
+Stop: `docker compose down`.
+
+The Compose file sets `image: ehentai-view:revive`, which must match the loaded tag. Do **not** pass `--build` on the notebook unless you intentionally want a local rebuild.
+
+## Alternative: build on a lab/server only
+
+On a machine where build is allowed (e.g. the lab box):
+
+```bash
+cd /workspace/e-hentai-view
+sudo docker compose build
+sudo docker save ehentai-view:revive | gzip > /path/to/ehentai-view-revive.tar.gz
+```
+
+Then transfer the tar to Windows and follow **Quick start** above.
 
 ## Environment
 
@@ -34,12 +61,13 @@ Compose sets `EHV_SITE=e-hentai` by default so a fresh box works anonymously. Th
 
 Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Dockerfiles, or git. A secrets file used only for offline live-check scripts on a lab machine is unrelated to Compose.
 
-## Windows (Docker Desktop)
+## Windows (Docker Desktop) checklist
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and ensure it is running (Linux engine).
-2. Open PowerShell in the project folder (or extract `ehv-source-latest.zip`).
-3. `copy .env.example .env` then `docker compose up --build`.
-4. Browse to `http://localhost:3000`.
+2. Obtain `ehentai-view-revive.tar.gz` (lab build) and the project folder / `ehv-source-latest.zip`.
+3. `docker load -i ehentai-view-revive.tar.gz` — confirm tag `ehentai-view:revive`.
+4. `copy .env.example .env` then `docker compose up -d` (**no** `--build`).
+5. Browse to `http://localhost:3000`.
 
 If upstream is blocked on your network, set `EHV_PROXY` to your local proxy. On Docker Desktop, `host.docker.internal` reaches the host (e.g. `http://host.docker.internal:7890`).
 
@@ -47,12 +75,9 @@ If upstream is blocked on your network, set `EHV_PROXY` to your local proxy. On 
 
 - Multi-stage `Dockerfile` (Node 22 Alpine, pnpm, Next build).
 - Runtime user `node`, port `8080`.
+- Image name: **`ehentai-view:revive`** (must match `docker-compose.yml`).
 - `.dockerignore` excludes `.git`, `node_modules`, `.next`, and `.env*` so secrets are not copied into the build context.
 
-Rebuild after code changes: `docker compose up --build`.
+## Verified on the lab box (2026-10-12 HKT)
 
-## Verified on the lab box (2026-10-10 HKT)
-
-`docker compose up --build` produced image `ehentai-view:revive`, container healthy on `0.0.0.0:3000->8080`.
-`GET /` and `GET /search` returned HTTP 200; logs showed `site: e-hentai`. No cookie env vars inside the container.
-Upstream `GET /api/gallery` from the container hit intermittent `getaddrinfo EAI_AGAIN` (host DNS); that is environmental, not a Compose misconfig.
+`sudo docker compose build` produced image `ehentai-view:revive`. Saved as `ehentai-view-revive.tar.gz` for Windows `docker load`. Compose `up -d` without `--build` uses that tag. No cookie env vars inside the container.
