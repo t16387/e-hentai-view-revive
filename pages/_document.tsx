@@ -6,13 +6,19 @@ class MyDocument extends Document {
     return (
       <Html>
         <Head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin=""
+          />
           <link
             rel="stylesheet"
-            href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Playfair+Display:ital@1&display=swap"
           />
           <meta charSet="utf-8" />
           <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
-          <meta name="theme-color" content="#fff" />
+          <meta name="theme-color" content="#0F0F23" />
           <link rel="apple-touch-icon" href="/static/icon.png" />
           <meta name="apple-mobile-web-app-capable" content="yes" />
           <meta
