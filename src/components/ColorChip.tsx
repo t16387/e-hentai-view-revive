@@ -8,10 +8,13 @@ import { Category } from '@/interface/gallery'
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
-      borderRadius: 2,
+      borderRadius: 6,
       border: 0,
       color: '#fff',
-      height: 28,
+      height: 32,
+      fontFamily: 'Inter, sans-serif',
+      fontWeight: 600,
+      cursor: 'default',
     },
     label: {
       padding: theme.spacing(0, 1),

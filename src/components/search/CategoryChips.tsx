@@ -1,4 +1,5 @@
 import ColorChip from '@/components/ColorChip'
+import { V4 } from '@/design/v4Tokens'
 import {
   CAT_KEYS,
   CAT_LABEL,
@@ -13,8 +14,13 @@ import makeStyles from '@mui/styles/makeStyles'
 import { useTranslation } from 'next-i18next'
 import React from 'react'
 
-const useStyles = makeStyles((theme: Theme) =>
-  createStyles({
+const useStyles = makeStyles((theme: Theme) => {
+  const dark = theme.palette.mode === 'dark'
+  const primary = dark ? V4.primary : V4.light.primary
+  const mutedFg = dark ? V4.mutedForeground : V4.light.mutedForeground
+  const border = dark ? V4.border : V4.light.border
+  const ring = dark ? V4.ring : V4.light.ring
+  return createStyles({
     header: {
       display: 'flex',
       alignItems: 'center',
@@ -24,36 +30,49 @@ const useStyles = makeStyles((theme: Theme) =>
       flexWrap: 'wrap',
     },
     title: {
+      fontFamily: 'Inter, sans-serif',
       fontWeight: 600,
-      letterSpacing: 0.2,
+      letterSpacing: 0.6,
       textTransform: 'uppercase',
       fontSize: '0.75rem',
-      color: theme.palette.text.secondary,
+      color: mutedFg,
     },
     actions: {
       display: 'inline-flex',
-      gap: theme.spacing(0.5),
+      gap: theme.spacing(1),
     },
     actionBtn: {
-      minHeight: 36,
-      [theme.breakpoints.down('sm')]: {
-        minHeight: 44,
-        minWidth: 72,
-      },
+      minHeight: 44,
+      minWidth: 72,
+      padding: theme.spacing(0.75, 1.5),
       textTransform: 'none',
-      borderRadius: 999,
+      borderRadius: 8,
       fontWeight: 600,
+      fontFamily: 'Inter, sans-serif',
+      cursor: 'pointer',
+      borderColor: alpha(primary, 0.55),
+      color: primary,
+      transition:
+        'background-color 200ms ease, border-color 200ms ease, opacity 200ms ease',
+      '&:focus-visible': {
+        outline: `2px solid ${ring}`,
+        outlineOffset: 2,
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        transition: 'none',
+      },
     },
-    /** Responsive wrapping grid — phone 2-col, tablet/desktop 5-col. */
+    /** Wrap grid — phone 2-col, tablet 3-col, desktop 5-col. No clipped labels. */
     grid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
       gap: theme.spacing(1),
       marginBottom: theme.spacing(1.5),
       [theme.breakpoints.up('sm')]: {
-        gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
       },
       [theme.breakpoints.up('md')]: {
+        gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
         gap: theme.spacing(1.25),
       },
     },
@@ -62,47 +81,75 @@ const useStyles = makeStyles((theme: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: 44,
-      borderRadius: 10,
+      borderRadius: 8,
       padding: theme.spacing(0.75, 1),
-      border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
-      backgroundColor:
-        theme.palette.mode === 'dark'
-          ? alpha(theme.palette.common.white, 0.04)
-          : alpha(theme.palette.common.black, 0.02),
+      cursor: 'pointer',
+      border: `1px solid ${alpha(border, dark ? 0.85 : 1)}`,
+      backgroundColor: dark
+        ? alpha(V4.muted, 0.55)
+        : alpha(V4.light.muted, 0.9),
       transition:
-        'opacity 120ms ease, transform 120ms ease, box-shadow 120ms ease',
-      '&:active': {
-        transform: 'scale(0.98)',
+        'background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, opacity 200ms ease',
+      '&:hover': {
+        borderColor: alpha(primary, 0.65),
+        backgroundColor: dark ? alpha(primary, 0.12) : alpha(primary, 0.06),
+      },
+      '&:focus-visible': {
+        outline: `2px solid ${ring}`,
+        outlineOffset: 2,
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        transition: 'none',
       },
     },
     tileOn: {
-      boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
-      backgroundColor: alpha(theme.palette.primary.main, 0.08),
+      borderColor: primary,
+      boxShadow: `inset 0 0 0 1px ${primary}`,
+      backgroundColor: dark ? alpha(primary, 0.18) : alpha(primary, 0.1),
     },
     tileOff: {
-      opacity: 0.42,
-      filter: 'grayscale(0.55)',
+      opacity: 0.55,
+    },
+    chipLabel: {
+      pointerEvents: 'none',
+      maxWidth: '100%',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
     },
     /** Compact horizontal wrap for index/result chrome. */
     compact: {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: theme.spacing(0.75),
-      marginBottom: theme.spacing(0.75),
+      gap: theme.spacing(1),
+      marginBottom: theme.spacing(1),
     },
     compactChip: {
       cursor: 'pointer',
-      minHeight: 36,
-      [theme.breakpoints.down('sm')]: {
+      '&&': {
         minHeight: 44,
+        height: 44,
+      },
+      borderRadius: 8,
+      fontFamily: 'Inter, sans-serif',
+      fontWeight: 600,
+      transition: 'opacity 200ms ease, box-shadow 200ms ease',
+      '&:focus-visible': {
+        outline: `2px solid ${ring}`,
+        outlineOffset: 2,
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        transition: 'none',
       },
     },
+    compactOn: {
+      boxShadow: `0 0 0 2px ${primary}`,
+    },
     compactOff: {
-      opacity: 0.35,
-      filter: 'grayscale(0.6)',
+      opacity: 0.42,
     },
   })
-)
+})
 
 export interface CategoryChipsProps {
   /** include-mask (bits set = category shown) */
@@ -111,7 +158,7 @@ export interface CategoryChipsProps {
   /** show All / None quick actions */
   showActions?: boolean
   /**
-   * `deck` = V3 responsive tile grid (search page).
+   * `deck` = V4 responsive tile grid (search page).
    * `compact` = wrapping chips for index/result filter bar.
    */
   variant?: 'deck' | 'compact'
@@ -145,7 +192,7 @@ const CategoryChips: React.FC<CategoryChipsProps> = ({
               label={CAT_LABEL[key]}
               size="small"
               className={`${classes.compactChip}${
-                on ? '' : ` ${classes.compactOff}`
+                on ? ` ${classes.compactOn}` : ` ${classes.compactOff}`
               }`}
               onClick={() => toggle(key)}
               aria-pressed={on}
@@ -202,10 +249,12 @@ const CategoryChips: React.FC<CategoryChipsProps> = ({
               aria-pressed={on}
               data-cat={key}
               data-included={on ? '1' : '0'}
+              focusRipple
             >
               <ColorChip
                 label={CAT_LABEL[key]}
                 size="small"
+                className={classes.chipLabel}
                 style={{ pointerEvents: 'none', maxWidth: '100%' }}
               />
             </ButtonBase>
