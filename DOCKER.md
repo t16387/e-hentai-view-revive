@@ -1,11 +1,13 @@
-# Running with Docker Compose
+# Docker & environment (revive)
 
-You do **not** need Node or pnpm on the notebook. Prefer a **pre-built image** (load from tar) so Windows never runs `docker compose build`.
+You do **not** need Node or pnpm on the notebook. Prefer a **pre-built image** (`docker load` from tar) so Windows never runs `docker compose build`.
+
+For a short overview in the main docs, see [README.md § Docker & environment](README.md#docker--environment-revive).
 
 ## Quick start (pre-built image — recommended on Windows)
 
-1. Copy `ehentai-view-revive.tar.gz` next to this project (or extract `ehv-source-latest.zip` which includes Compose files).
-2. Load the image (PowerShell or bash):
+1. Put `ehentai-view-revive.tar.gz` next to this project (or extract `ehv-source-latest.zip`, which includes Compose files).
+2. Load the image:
 
 ```bash
 # Linux / macOS / Git Bash
@@ -14,6 +16,8 @@ gunzip -c ehentai-view-revive.tar.gz | docker load
 # PowerShell (Docker Desktop)
 docker load -i ehentai-view-revive.tar.gz
 ```
+
+Confirm the tag is **`ehentai-view:revive`** (`docker images ehentai-view`).
 
 3. Configure env and start **without** `--build`:
 
@@ -27,7 +31,7 @@ Open **http://localhost:3000** (or the port in `EHV_HOST_PORT`).
 
 Stop: `docker compose down`.
 
-The Compose file sets `image: ehentai-view:revive`, which must match the loaded tag. Do **not** pass `--build` on the notebook unless you intentionally want a local rebuild.
+`docker-compose.yml` sets `image: ehentai-view:revive`, which must match the loaded tag. Do **not** pass `--build` on the notebook unless you intentionally want a local rebuild.
 
 ## Alternative: build on a lab/server only
 
@@ -39,27 +43,91 @@ sudo docker compose build
 sudo docker save ehentai-view:revive | gzip > /path/to/ehentai-view-revive.tar.gz
 ```
 
-Then transfer the tar to Windows and follow **Quick start** above.
+Transfer the tar to Windows and follow **Quick start** above.
 
-## Environment
+### Load vs build at a glance
 
-| Variable | Default | Meaning |
-|----------|---------|---------|
-| `EHV_SITE` | `e-hentai` in Compose | `e-hentai` (public) or `exhentai` (needs login) |
-| `EHV_PROXY` | empty | Optional HTTP(S) proxy for upstream fetches |
-| `EHV_HOST_PORT` | `3000` | Host port → container `8080` |
-| `PORT` | `8080` (in image) | Listen port inside the container |
-| `EHV_USER_AGENT` | browser-like default | Optional UA override |
+| Mode | When | Command | Needs Node/pnpm on host? |
+|------|------|---------|--------------------------|
+| **Load image** (everyday) | Windows notebook, sharing a lab build | `docker load …` then `docker compose up -d` | No |
+| **Build image** (lab/CI) | You changed the Dockerfile or app and need a new tar | `docker compose build` then `docker save …` | No (build runs inside Docker) |
+| **Bare Node** | Local develop / no Docker | `pnpm install` + `pnpm build` + `start.bat` / `pnpm start` | Yes |
 
-Compose sets `EHV_SITE=e-hentai` by default so a fresh box works anonymously. The Dockerfile alone still defaults the app to `exhentai` if the env is unset.
+Production Compose always sets `NODE_ENV=production` and listens on **8080 inside the container**. Rebuilding the image is only needed after source or Dockerfile changes — not for changing `.env` values (restart Compose after editing `.env`).
 
-## Cookies (ExHentai)
+## Environment variables
 
-1. Set `EHV_SITE=exhentai` in `.env`.
-2. Start Compose, open the app, use **Sign In** (email/password or cookie paste in the UI).
-3. Session cookies stay in **your browser** (HttpOnly). They are never written into the image or Compose file.
+Compose auto-reads `.env` for `${VAR}` substitution and passes selected vars into the container. Copy **`.env.example` → `.env`**; never commit `.env`.
 
-Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Dockerfiles, or git. A secrets file used only for offline live-check scripts on a lab machine is unrelated to Compose.
+### Vars you set in `.env` (Compose)
+
+| Variable | Required? | Example (placeholder) | Purpose | If omitted |
+|----------|-----------|------------------------|---------|------------|
+| `EHV_SITE` | Recommended | `e-hentai` or `exhentai` | Which upstream site the server fetches | Compose defaults to **`e-hentai`**. (Bare Node / Dockerfile with no env: app code defaults to **`exhentai`** — see below.) |
+| `EHV_HOST_PORT` | Optional | `3000` | Host port published to the browser → container `8080` | **`3000`** → open http://localhost:3000 |
+| `EHV_PROXY` | Optional | `http://host.docker.internal:7890` | HTTP(S) proxy for **server → site** requests | Empty: direct connection. (axios may still honour system `HTTP_PROXY` / `HTTPS_PROXY` if set elsewhere.) |
+| `EHV_USER_AGENT` | Optional | *(leave unset)* | Override User-Agent on upstream fetches | Built-in browser-like Chrome UA |
+
+### Vars set by Compose / the image (do not put secrets here)
+
+| Variable | Set by | Typical value | Purpose | If omitted |
+|----------|--------|---------------|---------|------------|
+| `NODE_ENV` | Compose + Dockerfile | `production` | Next/server production mode | Image defaults to `production`; bare `start.bat` also sets it |
+| `PORT` | Compose + Dockerfile | `8080` | Listen port **inside** the container | App falls back to `8080`. Host mapping is `EHV_HOST_PORT`, not `PORT`. |
+| `EHV_PROXY_TIMEOUT` | Optional (advanced) | `10000` | Timeout (ms) for image-proxy fetches to H@H nodes | **`10000`** |
+
+There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar in `.env`.
+
+### `EHV_SITE`: e-hentai vs exhentai
+
+| Value | Upstream | Login needed? | Typical use |
+|-------|----------|---------------|-------------|
+| `e-hentai` | https://e-hentai.org | No (anonymous OK) | Fresh Compose box, public browsing |
+| `exhentai` | https://exhentai.org | **Yes** — Sign In in the app UI | Full ExHentai after you have an account |
+
+**Default mismatch (intentional):**
+
+- **Docker Compose** defaults `EHV_SITE` to **`e-hentai`** so a fresh stack works without cookies.
+- **App code** (`server/src/config/api.js`) defaults to **`exhentai`** if the env is unset (matches historical bare-Node / `start.bat` / `dev.bat` behaviour).
+
+Always set `EHV_SITE` explicitly in `.env` when you care which site you hit.
+
+### Cookies (ExHentai only)
+
+1. Set `EHV_SITE=exhentai` in `.env` and restart Compose (`docker compose up -d`).
+2. Open the app and use **Sign In** (email/password or cookie paste in the UI).
+3. Session cookies stay in **your browser** (HttpOnly). The Node server forwards the browser’s cookies on upstream requests; they are **never** written into the image, Compose file, or `.env`.
+
+Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Dockerfiles, or git. A lab-only secrets file used for offline live-check scripts is unrelated to Compose and must stay off this repo.
+
+**Never bake cookies into the image.** `.dockerignore` excludes `.env*` (except `.env.example`) so a rebuild cannot copy local secrets into the build context.
+
+## Security
+
+| Item | Rule |
+|------|------|
+| `.env` | Gitignored (`.env`, `.env.*`). Holds machine-local Compose settings only. |
+| `.env.example` | Safe template committed to git — placeholders and comments only. |
+| Gallery cookies | Browser Sign-In UI only — never env, never Dockerfile `ENV`, never `docker commit` of a logged-in container. |
+| Image | Built from source + lockfile; runtime user `node`; no secrets in layers. |
+
+## Compose (everyday) vs Windows bare Node
+
+| | **Docker Compose** | **`start.bat` / local pnpm** |
+|--|--------------------|------------------------------|
+| Needs | Docker Desktop (or Engine) + loaded/built image | Node ≥20, pnpm, `pnpm install` + `pnpm build` |
+| Config | `.env` from `.env.example` | Hardcoded in bat / shell env (`EHV_SITE=exhentai`, `PORT=3000`) |
+| Default site | `e-hentai` (Compose) | `exhentai` (`start.bat` / `dev.bat`) |
+| Browser URL | http://localhost:**3000** (`EHV_HOST_PORT` → container 8080) | http://localhost:**3000** (Node listens on 3000 in `start.bat`) |
+| Prod vs rebuild | Change `.env` → restart container. Change code → rebuild image on lab, reload tar on Windows. | Change code → `pnpm build` again, then `start.bat`. |
+| Best for | Notebooks, “just run it”, sharing one lab image | Active development without Docker |
+
+| File | Mode | What it does |
+|------|------|----------------|
+| `start.bat` | production | Sets `EHV_SITE=exhentai`, `NODE_ENV=production`, `PORT=3000`, then `node server\src\server.js`. Does **not** use `pnpm start` / cross-env (those can exit silently on some PCs). Needs `.next` from `pnpm build`. |
+| `dev.bat` | development | Sets `EHV_SITE=exhentai`, `NODE_ENV=development`. API on **:8080** (`nodemon server\src\app.js`) and Next on **:3000** (`node server\src\server.js`). Browse **http://localhost:3000**. |
+
+Double-click from the project root (or run from `cmd`). Prefer Docker load+compose when you do not want a local Node toolchain.
 
 ## Windows (Docker Desktop) checklist
 
@@ -70,17 +138,6 @@ Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Docker
 5. Browse to `http://localhost:3000`.
 
 If upstream is blocked on your network, set `EHV_PROXY` to your local proxy. On Docker Desktop, `host.docker.internal` reaches the host (e.g. `http://host.docker.internal:7890`).
-
-## Windows native (Node, no Docker)
-
-If you already have Node ≥20 and a built tree (or are developing):
-
-| File | Mode | What it does |
-|------|------|----------------|
-| `start.bat` | production | Sets `EHV_SITE=exhentai`, `NODE_ENV=production`, `PORT=3000`, then `node server\src\server.js`. Does **not** use `pnpm start` / cross-env (those can exit silently on some PCs). Needs `.next` from `pnpm build`. |
-| `dev.bat` | development | Sets `EHV_SITE=exhentai`, `NODE_ENV=development`. Opens API on **:8080** (`nodemon server\src\app.js`, same as `dev:server`) and Next on **:3000** (`node server\src\server.js`, same as `dev:app`). Browse **http://localhost:3000**. |
-
-Double-click from the project root (or run from `cmd`). Prefer Docker load+compose when you do not want a local Node toolchain.
 
 ## Image details
 
