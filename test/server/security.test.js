@@ -109,7 +109,10 @@ describe('app security middleware', () => {
   })
 
   it('No-login gate is case-insensitive (/API/...)', async () => {
-    const r = await req('GET', '/API/gallery', { cookie: '' })
+    const r = await req('GET', '/API/gallery', {
+      cookie: '',
+      headers: { 'X-EHV-Site': 'exhentai' },
+    })
     expect(r.json).toMatchObject({ error: true, message: 'No login' })
   })
 

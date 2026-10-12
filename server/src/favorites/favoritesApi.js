@@ -1,11 +1,12 @@
 const axios = require('../axios')
-const { favoritesURL, favoritesApiURL, siteName } = require('../config/api')
+const { getSite } = require('../config/api')
 const { fetchPage } = require('../utils/fetchPage')
 const { listFromDocument } = require('../gallery/listPage')
 const { parseFavoritesSettingInfo } = require('./favoritesPaeser')
 const qs = require('qs')
 const { GalleryMode } = require('../constant')
 async function getFavorites(params, cookies) {
+  const { favoritesURL, siteName } = getSite()
   // the parser detects the display mode; no second request with inline_set
   const { document } = await fetchPage(favoritesURL, {
     cookies,
@@ -16,11 +17,13 @@ async function getFavorites(params, cookies) {
 }
 
 async function getFavoritesInfo(cookies) {
+  const { favoritesURL, siteName } = getSite()
   const { document } = await fetchPage(favoritesURL, { cookies, siteName })
   return await parseFavoritesSettingInfo(document)
 }
 
 async function updateFavorite({ gid, token, favcat }, cookies) {
+  const { favoritesApiURL } = getSite()
   await axios.request({
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

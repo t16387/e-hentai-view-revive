@@ -63,7 +63,7 @@ Compose auto-reads `.env` for `${VAR}` substitution and passes selected vars int
 
 | Variable | Required? | Example (placeholder) | Purpose | If omitted |
 |----------|-----------|------------------------|---------|------------|
-| `EHV_SITE` | Recommended | `e-hentai` or `exhentai` | Which upstream site the server fetches | Compose defaults to **`e-hentai`**. (Bare Node / Dockerfile with no env: app code defaults to **`exhentai`** — see below.) |
+| `EHV_SITE` | Optional default | `e-hentai` or `exhentai` | Server default when the SPA does not send `X-EHV-Site` / `ehv_site`. In-app **Settings → Gallery site** overrides per request. | Compose + app default: **`e-hentai`**. |
 | `EHV_HOST_PORT` | Optional | `3000` | Host port published to the browser → container `8080` | **`3000`** → open http://localhost:3000 |
 | `EHV_PROXY` | Optional | `http://host.docker.internal:7890` | HTTP(S) proxy for **server → site** requests | Empty: direct connection. (axios may still honour system `HTTP_PROXY` / `HTTPS_PROXY` if set elsewhere.) |
 | `EHV_USER_AGENT` | Optional | *(leave unset)* | Override User-Agent on upstream fetches | Built-in browser-like Chrome UA |
@@ -85,18 +85,13 @@ There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar i
 | `e-hentai` | https://e-hentai.org | No (anonymous OK) | Fresh Compose box, public browsing |
 | `exhentai` | https://exhentai.org | **Yes** — Sign In in the app UI | Full ExHentai after you have an account |
 
-**Default mismatch (intentional):**
+**Defaults:** Compose, app code, and Windows bats all default to **`e-hentai`**. Prefer **Settings → Gallery site** in the app to switch to ExHentai at runtime (sends `X-EHV-Site`); `EHV_SITE` is only the server fallback when the client sends no preference.
 
-- **Docker Compose** defaults `EHV_SITE` to **`e-hentai`** so a fresh stack works without cookies.
-- **App code** (`server/src/config/api.js`) defaults to **`exhentai`** if the env is unset (matches historical bare-Node / `start.bat` / `dev.bat` behaviour).
+### Cookies (ExHentai)
 
-Always set `EHV_SITE` explicitly in `.env` when you care which site you hit.
-
-### Cookies (ExHentai only)
-
-1. Set `EHV_SITE=exhentai` in `.env` and restart Compose (`docker compose up -d`).
-2. Open the app and use **Sign In** (email/password or cookie paste in the UI).
-3. Session cookies stay in **your browser** (HttpOnly). The Node server forwards the browser’s cookies on upstream requests; they are **never** written into the image, Compose file, or `.env`.
+1. Open the app (default site is e-hentai) and use **Sign In**: open forums login → optionally open exhentai.org for `igneous` → paste cookies (Cookie Login). Email/password login is removed (Cloudflare).
+2. In **Settings → Gallery site**, switch to **exhentai.org** (requires login cookies + valid `igneous`).
+3. Session cookies stay in **your browser** (HttpOnly on the app origin). The Node server forwards them upstream; they are **never** written into the image, Compose file, or `.env`.
 
 Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Dockerfiles, or git. A lab-only secrets file used for offline live-check scripts is unrelated to Compose and must stay off this repo.
 
@@ -116,7 +111,7 @@ Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Docker
 | | **Docker Compose** | **`start.bat` / local pnpm** |
 |--|--------------------|------------------------------|
 | Needs | Docker Desktop (or Engine) + loaded/built image | Node ≥20, pnpm, `pnpm install` + `pnpm build` |
-| Config | `.env` from `.env.example` | Hardcoded in bat / shell env (`EHV_SITE=exhentai`, `PORT=3000`) |
+| Config | `.env` from `.env.example` | Hardcoded in bat / shell env (`EHV_SITE=e-hentai`, `PORT=3000`) |
 | Default site | `e-hentai` (Compose) | `exhentai` (`start.bat` / `dev.bat`) |
 | Browser URL | http://localhost:**3000** (`EHV_HOST_PORT` → container 8080) | http://localhost:**3000** (Node listens on 3000 in `start.bat`) |
 | Prod vs rebuild | Change `.env` → restart container. Change code → rebuild image on lab, reload tar on Windows. | Change code → `pnpm build` again, then `start.bat`. |

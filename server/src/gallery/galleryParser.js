@@ -1,7 +1,7 @@
 const { uniq } = require('lodash')
 const dayjs = require('dayjs')
 const { GalleryMode } = require('../constant')
-const { baseURL } = require('../config/api')
+const { getSite } = require('../config/api')
 const { sanitizeCommentHtml } = require('../utils/sanitizeHtml')
 
 /**
@@ -418,7 +418,7 @@ function parseDetailPageInfo(document, html) {
     posted,
     category,
     uploader,
-    url: `${baseURL}/g/${gid}/${token}`,
+    url: `${getSite().baseURL}/g/${gid}/${token}`,
     language,
     filesize,
     filecount,

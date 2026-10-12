@@ -14,7 +14,7 @@ if not exist ".next\BUILD_ID" (
   exit /b 1
 )
 
-set EHV_SITE=exhentai
+set EHV_SITE=e-hentai
 set NODE_ENV=production
 set PORT=3000
 

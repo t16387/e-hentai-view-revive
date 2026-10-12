@@ -5,7 +5,8 @@ const cache = require('../cache')
 const router = express.Router()
 
 router.get('/', async (req, res) => {
-  const cacheKey = `[g${userCacheScope(req.cookies)}] popular`
+  const site = (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
+  const cacheKey = `[g${userCacheScope(req.cookies)}] ${site} popular`
   let content = cache.get(cacheKey)
   if (!content) {
     content = await getPopular(upstreamCookieString(req.cookies))

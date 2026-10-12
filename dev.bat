@@ -13,7 +13,7 @@ if not exist "node_modules\" (
   exit /b 1
 )
 
-set EHV_SITE=exhentai
+set EHV_SITE=e-hentai
 set NODE_ENV=development
 
 echo [ehv] EHV_SITE=%EHV_SITE% NODE_ENV=%NODE_ENV%
@@ -22,7 +22,7 @@ echo [ehv] App  :3000  (node server\src\server.js)  ^<- browse this
 echo.
 
 REM Sibling console for the API so this window stays on Next.
-start "ehv-api" cmd /k "cd /d %~dp0 && set EHV_SITE=exhentai&& set NODE_ENV=development&& if exist node_modules\.bin\nodemon.cmd (node_modules\.bin\nodemon.cmd server\src\app.js -w server) else (node server\src\app.js)"
+start "ehv-api" cmd /k "cd /d %~dp0 && set EHV_SITE=e-hentai&& set NODE_ENV=development&& if exist node_modules\.bin\nodemon.cmd (node_modules\.bin\nodemon.cmd server\src\app.js -w server) else (node server\src\app.js)"
 
 timeout /t 2 /nobreak >nul
 node server\src\server.js

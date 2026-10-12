@@ -16,8 +16,9 @@ router.get('/', async (req, res) => {
     favcat: (v) => v === 'all' || /^\d$/.test(v),
   })
   if (!params.favcat) params.favcat = 'all'
+  const site = (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
   const cacheKey = listCacheKey(
-    'favorites',
+    `favorites:${site}`,
     userCacheScope(req.cookies),
     params
   )
@@ -32,7 +33,10 @@ router.get('/', async (req, res) => {
 router.get('/info', async (req, res) => {
   // FavIconButton is mounted twice per gallery view (toolbar + menu)
   const list = await cached(
-    favoritesInfoKey(userCacheScope(req.cookies)),
+    favoritesInfoKey(
+      userCacheScope(req.cookies),
+      (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
+    ),
     60,
     () => getFavoritesInfo(upstreamCookieString(req.cookies))
   )
@@ -47,7 +51,18 @@ router.put('/add/:gid/:token', async (req, res) => {
     upstreamCookieString(req.cookies)
   )
   const scope = userCacheScope(req.cookies)
-  cache.del([favoritesInfoKey(scope), detailKey(scope, gid, token)])
+  cache.del([
+    favoritesInfoKey(
+      scope,
+      (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
+    ),
+    detailKey(
+      scope,
+      gid,
+      token,
+      (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
+    ),
+  ])
   res.json({ error: false, message: 'success' })
 })
 

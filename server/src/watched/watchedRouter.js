@@ -7,7 +7,12 @@ const router = express.Router()
 
 router.get('/', async (req, res) => {
   const params = pickListParams(req.query)
-  const cacheKey = listCacheKey('watched', userCacheScope(req.cookies), params)
+  const site = (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
+  const cacheKey = listCacheKey(
+    `watched:${site}`,
+    userCacheScope(req.cookies),
+    params
+  )
   let content = cache.get(cacheKey)
   if (!content) {
     content = await getWatched(params, upstreamCookieString(req.cookies))

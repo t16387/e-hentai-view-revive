@@ -16,7 +16,7 @@ const fake = {
   igneous: 'placeholder',
 }
 
-describe('login behind the forums Cloudflare challenge (default site exhentai)', () => {
+describe('login behind the forums Cloudflare challenge (exhentai validation)', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('password login reports the challenge instead of a parse failure', async () => {
@@ -35,7 +35,7 @@ describe('login behind the forums Cloudflare challenge (default site exhentai)',
         data: INDEX,
         headers: { 'content-type': 'text/html' },
       })
-    await expect(validateLogin(fake)).resolves.toMatch(
+    await expect(validateLogin(fake, 'exhentai')).resolves.toMatch(
       /verified on exhentai\.org/
     )
     expect(get).toHaveBeenCalledTimes(2)
@@ -53,7 +53,7 @@ describe('login behind the forums Cloudflare challenge (default site exhentai)',
         data: '',
         headers: { 'content-type': 'text/html' },
       })
-    await expect(validateLogin(fake)).rejects.toMatchObject({
+    await expect(validateLogin(fake, 'exhentai')).rejects.toMatchObject({
       code: 'sad panda',
     })
   })
@@ -62,6 +62,6 @@ describe('login behind the forums Cloudflare challenge (default site exhentai)',
     vi.spyOn(axios, 'get')
       .mockRejectedValueOnce(new Error('ECONNRESET'))
       .mockResolvedValueOnce({ status: 200, data: INDEX, headers: {} })
-    await expect(validateLogin(fake)).resolves.toMatch(/verified/)
+    await expect(validateLogin(fake, 'exhentai')).resolves.toMatch(/verified/)
   })
 })

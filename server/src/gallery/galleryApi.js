@@ -1,5 +1,5 @@
 const axios = require('../axios')
-const { baseApiURL, baseURL, gallerytorrentsURL } = require('../config/api')
+const { getSite } = require('../config/api')
 const {
   // parseHTMLAnchorElement,
   parseDetailPageCommentList,
@@ -16,10 +16,10 @@ const translated = require('../utils/translated')
 const { chunk } = require('lodash')
 const { GalleryMode } = require('../constant')
 const { fetchPage } = require('../utils/fetchPage')
-const { siteName } = require('../config/api')
 const { listFromDocument } = require('./listPage')
 async function gdata(gidlist, cookies) {
   if (gidlist.length === 0) return []
+  const { baseApiURL, baseURL } = getSite()
   const taskList = []
   chunk(gidlist, 25).forEach((gidlist) =>
     taskList.push(
@@ -68,6 +68,7 @@ async function gdata(gidlist, cookies) {
  * @returns {Promise<{list: any[], total: number, totalText: string, next: string|null, prev: string|null}>}
  */
 async function galleryList(params, cookies) {
+  const { baseURL, siteName } = getSite()
   // no inline_set: the parser detects the display mode itself
   const { document } = await fetchPage(`${baseURL}/`, {
     cookies,
@@ -78,6 +79,7 @@ async function galleryList(params, cookies) {
 }
 
 async function galleryDetail({ gid, token }, cookies) {
+  const { baseURL, siteName } = getSite()
   let list = { list: [], total: 0 }
   let commentList = []
   let tagList = []
@@ -100,6 +102,7 @@ async function galleryDetail({ gid, token }, cookies) {
   return { list, commentList, tagList, info }
 }
 async function galleryDetailPage({ gid, token, p }, cookies) {
+  const { baseURL, siteName } = getSite()
   const { document } = await fetchPage(`${baseURL}/g/${gid}/${token}/`, {
     cookies,
     params: { p },
@@ -110,6 +113,7 @@ async function galleryDetailPage({ gid, token, p }, cookies) {
   return parseDetailPageList(document)
 }
 async function loadImg(url, cookies) {
+  const { siteName } = getSite()
   let count = 0
   async function load() {
     try {
@@ -127,6 +131,7 @@ async function loadImg(url, cookies) {
 }
 
 async function gallerytorrentsList({ gid, token }, cookies) {
+  const { gallerytorrentsURL, siteName } = getSite()
   const { document } = await fetchPage(gallerytorrentsURL, {
     cookies,
     params: { gid, t: token },

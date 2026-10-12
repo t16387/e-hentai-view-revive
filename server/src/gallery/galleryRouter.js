@@ -24,7 +24,12 @@ const router = express.Router()
 
 router.get('/', async (req, res) => {
   const params = pickListParams(req.query)
-  const cacheKey = listCacheKey('gallery', userCacheScope(req.cookies), params)
+  const site = (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
+  const cacheKey = listCacheKey(
+    `gallery:${site}`,
+    userCacheScope(req.cookies),
+    params
+  )
 
   let content = cache.get(cacheKey)
   if (!content) {
@@ -64,8 +69,9 @@ router.get('/:gid/:token', async (req, res) => {
 
   // short cache + coalescing: the detail page, the reader and SWR
   // revalidations used to fetch the same gallery several times in a row
+  const site = (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
   const content = await cached(
-    detailKey(userCacheScope(req.cookies), gid, token),
+    detailKey(userCacheScope(req.cookies), gid, token, site),
     30,
     () => galleryDetail({ gid, token }, upstreamCookieString(req.cookies))
   )
@@ -81,7 +87,12 @@ router.get('/:gid/:token/torrent', async (req, res) => {
   if (!isGalleryRef(gid, token)) return badRequest(res)
 
   const content = await cached(
-    torrentKey(userCacheScope(req.cookies), gid, token),
+    torrentKey(
+      userCacheScope(req.cookies),
+      gid,
+      token,
+      (req.ehvSite && req.ehvSite.siteName) || 'e-hentai'
+    ),
     300,
     () => gallerytorrentsList({ gid, token }, upstreamCookieString(req.cookies))
   )

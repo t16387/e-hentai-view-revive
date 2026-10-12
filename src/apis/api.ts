@@ -1,26 +1,18 @@
 import Axios from 'axios'
 import Router from 'next/router'
 import { DetailThumbPage } from '@/interface/gallery'
+import { readEhvSite, EhvSiteId } from '@/utils/sitePrefs'
 export const axios = Axios.create({
   headers: { 'X-EHV-CSRF': '1' },
 })
-// const maxQueueLength = 8
-// let count = 0
-// axios.interceptors.request.use((req) => {
-//   return new Promise((resolve, reject) => {
-//     const fn = () => {
-//       if (count < maxQueueLength) {
-//         count++
-//         return resolve(req)
-//       }
-//       requestAnimationFrame(fn)
-//     }
-//     fn()
-//   })
-// })
+
+axios.interceptors.request.use((config) => {
+  config.headers = config.headers || {}
+  config.headers['X-EHV-Site'] = readEhvSite()
+  return config
+})
 
 axios.interceptors.response.use((res) => {
-  // count--
   // not logged in, or exhentai rejected the cookies (sad panda)
   if (
     res.data.error &&
@@ -71,4 +63,28 @@ export async function loadMorePage(url: string) {
   >(url)
   if (res.data.error) throw new Error(res.data.message || 'load page failed')
   return res.data
+}
+
+export async function fetchSitePreference() {
+  return (
+    await axios.get<{
+      error: boolean
+      site: EhvSiteId
+      requiresLogin: boolean
+      sites: EhvSiteId[]
+      envDefault: EhvSiteId
+    }>('/api/user/site')
+  ).data
+}
+
+export async function setSitePreference(site: EhvSiteId) {
+  return (
+    await axios.post<{
+      error: boolean
+      code?: string
+      message: string
+      site?: EhvSiteId
+      requiresLogin?: boolean
+    }>('/api/user/site', { site })
+  ).data
 }

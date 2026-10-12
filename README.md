@@ -67,7 +67,7 @@ Copy `.env.example` → `.env`. **Never commit `.env`.** Never put gallery cooki
 
 | Variable | Required? | Example | Purpose | If omitted |
 |----------|-----------|---------|---------|------------|
-| `EHV_SITE` | Recommended | `e-hentai` / `exhentai` | Upstream site | Compose → **`e-hentai`**. Bare Node with no env → app defaults **`exhentai`**. |
+| `EHV_SITE` | Optional default | `e-hentai` / `exhentai` | Server fallback site; in-app **Settings → Gallery site** overrides per request | **`e-hentai`** (Compose, app, bats) |
 | `EHV_HOST_PORT` | Optional | `3000` | Host port → container `8080` | **`3000`** |
 | `EHV_PROXY` | Optional | `http://host.docker.internal:7890` | Proxy for server→site fetches | Direct (no proxy) |
 | `EHV_USER_AGENT` | Optional | *(unset)* | Override upstream User-Agent | Built-in browser-like UA |
@@ -81,11 +81,11 @@ Copy `.env.example` → `.env`. **Never commit `.env`.** Never put gallery cooki
 | | Docker Compose | `start.bat` / local pnpm |
 |--|----------------|--------------------------|
 | Toolchain | Docker only | Node ≥20 + pnpm + `pnpm build` |
-| Config | `.env` | Hardcoded in bat (`EHV_SITE=exhentai`, `PORT=3000`) |
-| Default site | `e-hentai` | `exhentai` |
+| Config | `.env` | Hardcoded in bat (`EHV_SITE=e-hentai`, `PORT=3000`) |
+| Default site | `e-hentai` | `e-hentai` (switch in Settings) |
 | Best for | Notebooks, shared lab image | Local development |
 
-- `dev.bat` — Next + API for development (`EHV_SITE=exhentai`). Browse http://localhost:3000
+- `dev.bat` — Next + API for development (`EHV_SITE=e-hentai`). Browse http://localhost:3000
 - `start.bat` — production after `pnpm build` (`PORT=3000`). Prefer Docker on notebooks; see [DOCKER.md](DOCKER.md)
 
 ### Security
@@ -118,7 +118,7 @@ yarn run dev:app
 
 ### Windows runners (no cross-env)
 
-- `dev.bat` — local Next + API (`EHV_SITE=exhentai`). Browse http://localhost:3000
+- `dev.bat` — local Next + API (`EHV_SITE=e-hentai`). Browse http://localhost:3000
 - `start.bat` — production after `pnpm build` (`PORT=3000`). Prefer Docker on notebooks; see [DOCKER.md](DOCKER.md)
 
 ## Thanks

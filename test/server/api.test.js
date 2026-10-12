@@ -43,9 +43,11 @@ function captureLogs() {
   for (const m of ['log', 'error', 'warn'])
     vi.spyOn(console, m).mockImplementation((...a) => logs.push(format(...a)))
 }
-async function get(path, { cookie = COOKIE } = {}) {
+async function get(path, { cookie = COOKIE, headers: extra = {} } = {}) {
   captureLogs()
-  const res = await fetch(base + path, { headers: cookie ? { cookie } : {} })
+  const headers = { ...extra }
+  if (cookie) headers.cookie = cookie
+  const res = await fetch(base + path, { headers })
   const text = await res.text()
   let json = null
   try {
@@ -71,9 +73,22 @@ const noSecrets = (r) => {
 describe('API error codes', () => {
   it('no login cookie on exhentai -> No login, no upstream request', async () => {
     const up = mockUpstream(async () => html(''))
-    const r = await get('/api/gallery', { cookie: '' })
+    const r = await get('/api/gallery', {
+      cookie: '',
+      headers: { 'X-EHV-Site': 'exhentai' },
+    })
     expect(r.json).toMatchObject({ error: true, message: 'No login' })
     expect(up).not.toHaveBeenCalled()
+  })
+
+  it('anonymous gallery on e-hentai is allowed (default site)', async () => {
+    mockUpstream(async () =>
+      html(
+        '<html><body><div class="itg gld"></div><p>No hits found</p></body></html>'
+      )
+    )
+    const r = await get('/api/gallery', { cookie: '' })
+    expect(r.json.error).toBe(false)
   })
 
   it.each([
@@ -103,7 +118,9 @@ describe('API error codes', () => {
     ],
   ])('sad panda (%s) -> code "sad panda"', async (_n, reply) => {
     mockUpstream(async () => reply())
-    const r = await get('/api/gallery?f_search=sp')
+    const r = await get('/api/gallery?f_search=sp', {
+      headers: { 'X-EHV-Site': 'exhentai' },
+    })
     expect(r.status).toBe(200)
     expect(r.json).toMatchObject({ error: true, code: 'sad panda' })
     noSecrets(r)

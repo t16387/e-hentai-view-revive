@@ -1,4 +1,4 @@
-const { loginURL, configURL, baseURL, siteName } = require('../config/api')
+const { loginURL, getSite, getSiteConfig } = require('../config/api')
 const {
   fetchPage,
   isCloudflareChallenge,
@@ -41,7 +41,11 @@ async function login(payload) {
   }
 }
 
-async function validateLogin({ ipb_member_id, ipb_pass_hash, igneous }) {
+async function validateLogin(
+  { ipb_member_id, ipb_pass_hash, igneous },
+  siteName
+) {
+  const site = getSiteConfig(siteName || getSite().siteName)
   const cookie = { ipb_member_id, ipb_pass_hash }
   if (igneous) cookie.igneous = igneous
   const cookies = getCookieString(cookie)
@@ -59,11 +63,12 @@ async function validateLogin({ ipb_member_id, ipb_pass_hash, igneous }) {
   }
   // the forums are unreachable from servers (Cloudflare): verify the
   // cookies against the gallery site itself instead
-  return validateOnSite(cookies)
+  return validateOnSite(cookies, site)
 }
 
 /** read-only check that the cookies are accepted by the configured site */
-async function validateOnSite(cookies) {
+async function validateOnSite(cookies, site) {
+  const { siteName, baseURL } = site || getSite()
   if (siteName === 'exhentai') {
     // throws [sad panda] when exhentai rejects the cookies
     const { document } = await fetchPage(`${baseURL}/`, {
@@ -89,7 +94,8 @@ async function validateOnSite(cookies) {
   return 'You are now logged in (verified on e-hentai.org)'
 }
 
-async function getUserSetting(cookie) {
+async function getUserSetting(cookie, siteName) {
+  const { configURL } = getSiteConfig(siteName || getSite().siteName)
   const res = await axios.get(configURL, { headers: { Cookie: cookie } })
   return { cookie: parseCookieToJSON(res.headers['set-cookie']) }
 }

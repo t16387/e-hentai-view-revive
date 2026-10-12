@@ -125,7 +125,9 @@ describe('fetchPage', () => {
     const get = vi
       .spyOn(axios, 'get')
       .mockResolvedValue(page(302, '', { location: '/loop' }))
-    await expect(fetchPage('https://exhentai.org/')).rejects.toMatchObject({
+    await expect(
+      fetchPage('https://exhentai.org/', { siteName: 'exhentai' })
+    ).rejects.toMatchObject({
       code: 'sad panda',
     })
     expect(get).toHaveBeenCalledTimes(3)

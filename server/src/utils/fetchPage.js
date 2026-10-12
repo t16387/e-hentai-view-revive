@@ -31,7 +31,7 @@ function isCloudflareChallenge(res) {
  * - sad panda: exhentai without valid cookies answers with an image, an empty
  *   body, a redirect without body, or sets igneous=mystery
  */
-function classifyBadPage(res, { siteName = 'exhentai' } = {}) {
+function classifyBadPage(res, { siteName = 'e-hentai' } = {}) {
   const type = header(res, 'content-type')
   const body = typeof res.data === 'string' ? res.data : ''
   if (isCloudflareChallenge(res))

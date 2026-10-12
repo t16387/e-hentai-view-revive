@@ -1,5 +1,6 @@
 import Layout from '@/components/Layout'
 import Logout from '@/widgets/setting/Logout'
+import SiteSelector from '@/widgets/setting/SiteSelector'
 import UserCookie from '@/widgets/setting/UserCookie'
 import { useIsmobile } from '@/theme'
 import {
@@ -32,6 +33,7 @@ const EHSetting = () => {
         <Logout />
         <UserCookie />
         <ListSubheader>{t('EH.Setting')}</ListSubheader>
+        <SiteSelector />
         <ListItem button onClick={goEhConfig}>
           <ListItemIcon>
             <SettingsIcon />

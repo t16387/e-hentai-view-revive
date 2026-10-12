@@ -23,3 +23,6 @@ export const LOCAL_DO_NOT_STORE_HISTORY = 'doNotStoreHistory'
 
 /** UI chrome theme: classic | v3 | v4 (localStorage string). */
 export const LOCAL_UI_THEME = 'uiTheme'
+
+/** Upstream gallery site: e-hentai | exhentai (localStorage string). */
+export const LOCAL_EHV_SITE = 'ehvSite'

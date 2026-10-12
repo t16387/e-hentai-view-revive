@@ -6,6 +6,13 @@ const {
   userCacheScope,
   UPSTREAM_COOKIES,
 } = require('../utils/cookies')
+const {
+  SITE_IDS,
+  normalizeSiteName,
+  getSite,
+  getSiteConfig,
+  envSiteName,
+} = require('../config/api')
 const cache = require('../cache')
 const router = express.Router()
 
@@ -28,24 +35,37 @@ const cookieOption = (req) => {
   }
 }
 
+/** Preference cookie is readable by the SPA (not a secret) */
+const sitePrefCookieOption = (req) => {
+  const base = cookieOption(req)
+  return { ...base, httpOnly: false }
+}
+
 router.post('/login', async (req, res) => {
   const { UserName, PassWord, method, ipb_member_id, ipb_pass_hash, igneous } =
     req.body
+  const siteName = getSite().siteName
 
   let content = ''
   let userCookie = {}
 
   if (method === 'cookie') {
-    content = await validateLogin({ ipb_member_id, ipb_pass_hash, igneous })
+    content = await validateLogin(
+      { ipb_member_id, ipb_pass_hash, igneous },
+      siteName
+    )
     userCookie = { ipb_member_id, ipb_pass_hash, igneous }
   } else {
+    // Password login against forums is usually blocked by Cloudflare;
+    // the UI no longer offers it. Kept for API compatibility.
     const { message, cookie } = await login({ UserName, PassWord })
     content = message
     userCookie = cookie
   }
 
   const { cookie: setingCookie } = await getUserSetting(
-    getCookieString(userCookie)
+    getCookieString(userCookie),
+    siteName
   )
   Object.entries({ ...setingCookie, ...userCookie }).forEach(([key, value]) => {
     if (value === undefined || value === null || value === '') return
@@ -57,7 +77,10 @@ router.post('/login', async (req, res) => {
 })
 
 router.post('/setting', async (req, res) => {
-  const { cookie } = await getUserSetting(upstreamCookieString(req.cookies))
+  const { cookie } = await getUserSetting(
+    upstreamCookieString(req.cookies),
+    getSite().siteName
+  )
   Object.entries(cookie).forEach(([key, value]) =>
     res.cookie(key, value, cookieOption(req))
   )
@@ -87,6 +110,63 @@ router.get('/cookies', async (req, res) => {
     if (value !== undefined && value !== '') cookies[key] = value
   })
   res.json({ error: false, cookies })
+})
+
+/**
+ * Current upstream site preference (request-resolved) and available ids.
+ */
+router.get('/site', async (req, res) => {
+  const site = getSite()
+  res.json({
+    error: false,
+    site: site.siteName,
+    requiresLogin: site.requiresLogin,
+    sites: SITE_IDS,
+    envDefault: envSiteName(),
+  })
+})
+
+/**
+ * Persist site preference (cookie + optional client header). Switching to
+ * exhentai requires login cookies; missing igneous is reported clearly.
+ */
+router.post('/site', async (req, res) => {
+  const requested =
+    normalizeSiteName(req.body && req.body.site) ||
+    normalizeSiteName(req.body && req.body.siteName)
+  if (!requested) {
+    return res.status(400).json({
+      error: true,
+      message: 'site must be e-hentai or exhentai',
+    })
+  }
+  const site = getSiteConfig(requested)
+  if (site.requiresLogin) {
+    const c = req.cookies || {}
+    if (!c.ipb_member_id || !c.ipb_pass_hash) {
+      return res.json({
+        error: true,
+        code: 'no login',
+        message:
+          'Sign in first (Cookie Login) before switching to exhentai.org',
+      })
+    }
+    if (!c.igneous || c.igneous === 'mystery') {
+      return res.json({
+        error: true,
+        code: 'sad panda',
+        message:
+          'exhentai needs a valid igneous cookie. Open exhentai.org in this browser after signing in on e-hentai, then Cookie Login again with igneous included.',
+      })
+    }
+  }
+  res.cookie('ehv_site', requested, sitePrefCookieOption(req))
+  res.json({
+    error: false,
+    site: requested,
+    requiresLogin: site.requiresLogin,
+    message: `Using ${requested}`,
+  })
 })
 
 router.get('/test/cookie', async (req, res) => {
