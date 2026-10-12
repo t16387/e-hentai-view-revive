@@ -131,23 +131,22 @@ If you can't see the picture, please see [here](/translations/en/FAQ.md)
 
 ## Development
 
+Prefer **pnpm 10** and **Node ≥ 20** (`packageManager` / `engines`). npm/yarn are not preferred.
+
 ```shell
-# The first time
-# npm
-npm install
-npm run dev:server
-npm run dev:app
-#yarn
-yarn
-yarn run dev:server
-yarn run dev:app
+# First time
+pnpm install
+
+# Dev (two terminals)
+pnpm run dev:server
+pnpm run dev:app
+
+# Or on Windows: dev.bat
 ```
 
-### Windows runners (no cross-env)
+Production locally: `pnpm build`, then `start.bat` (Windows) or `node server` / `pnpm start`. Browse http://localhost:3000 (or `PORT` / `EHV_HOST_PORT`).
 
-- `dev.bat` — local Next + API (`EHV_SITE=e-hentai`). Browse http://localhost:3000 (or `PORT` / `EHV_HOST_PORT` from env/`.env`)
-- `start.bat` — production after `pnpm build`. Same port rules. Prefer Docker on notebooks; see [DOCKER.md](DOCKER.md)
-- Port conflict example: `set PORT=3001` then run the bat, or set `PORT=3001` in `.env`
+For Docker Compose, see **[Docker & environment (revive)](#docker--environment-revive)** and [DOCKER.md](DOCKER.md).
 
 ## Thanks
 
