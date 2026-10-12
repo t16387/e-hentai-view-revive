@@ -132,5 +132,12 @@
   "Search.Filters": "筛选",
   "Search.AdvancedSheet": "高级筛选",
   "Search.Categories": "分类",
-  "Search.Done": "完成"
+  "Search.Done": "完成",
+  "UiTheme": "界面主题",
+  "UiTheme.classic": "经典",
+  "UiTheme.classic.Hint": "接近原始 Material UI 的列表与搜索外观。",
+  "UiTheme.v3": "Filter Deck V3",
+  "UiTheme.v3.Hint": "取景器分页与 Filter Deck 样式。",
+  "UiTheme.v4": "Pro Max V4",
+  "UiTheme.v4.Hint": "赛博朋克紫金外观（当前默认）。"
 }

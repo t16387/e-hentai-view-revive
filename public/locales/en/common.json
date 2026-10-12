@@ -132,5 +132,12 @@
   "Search.Filters": "Filters",
   "Search.AdvancedSheet": "Advanced filters",
   "Search.Categories": "Categories",
-  "Search.Done": "Done"
+  "Search.Done": "Done",
+  "UiTheme": "UI theme",
+  "UiTheme.classic": "Classic",
+  "UiTheme.classic.Hint": "Original Material UI look for list and search chrome.",
+  "UiTheme.v3": "Filter Deck V3",
+  "UiTheme.v3.Hint": "Seed-based viewfinder pager and Filter Deck chrome.",
+  "UiTheme.v4": "Pro Max V4",
+  "UiTheme.v4.Hint": "Cyberpunk violet and gold chrome (current default)."
 }

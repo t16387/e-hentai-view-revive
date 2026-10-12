@@ -1,7 +1,10 @@
 import { V4 } from '@/design/v4Tokens'
+import { DEFAULT_UI_THEME, UiThemeId, readUiTheme } from '@/utils/uiThemePrefs'
 import { useMediaQuery } from '@mui/material'
+import { blue, pink } from '@mui/material/colors'
 import {
   createTheme,
+  darken,
   StyledEngineProvider,
   Theme,
   ThemeProvider as MuiThemeProvider,
@@ -21,32 +24,28 @@ declare module '@mui/styles/defaultTheme' {
 
 export const DispatchContext = createContext<React.Dispatch<Action>>(() => {})
 export const IsMobile = createContext<boolean | null>(null)
-export type Action = { type: 'CHANGE'; payload: any }
+export const UiThemeContext = createContext<UiThemeId>(DEFAULT_UI_THEME)
+
+export type Action = {
+  type: 'CHANGE'
+  payload: Partial<InitialThemeOptionsProps>
+}
 export interface InitialThemeOptionsProps {
   paletteType: 'dark' | 'light'
+  uiTheme: UiThemeId
 }
 const InitialThemeOptions: InitialThemeOptionsProps = {
   paletteType: 'light',
+  uiTheme: DEFAULT_UI_THEME,
 }
 
-const ThemeProvider: FC<{}> = ({ children }) => {
-  const [themeOptions, dispatch] = useReducer<
-    Reducer<InitialThemeOptionsProps, Action>
-  >((state, action) => {
-    switch (action.type) {
-      case 'CHANGE':
-        return {
-          ...state,
-          paletteType: action.payload.paletteType,
-        }
-      default:
-        return state
-    }
-  }, InitialThemeOptions)
+function createAppTheme(
+  paletteType: 'dark' | 'light',
+  uiTheme: UiThemeId
+): Theme {
+  const dark = paletteType === 'dark'
 
-  const { paletteType } = themeOptions
-  const theme = useMemo(() => {
-    const dark = paletteType === 'dark'
+  if (uiTheme === 'v4') {
     return createTheme({
       typography: {
         fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
@@ -69,7 +68,7 @@ const ThemeProvider: FC<{}> = ({ children }) => {
           contrastText: dark ? V4.foreground : '#fff',
         },
         secondary: {
-          main: dark ? V4.accent : V4.accent,
+          main: V4.accent,
           contrastText: V4.onAccent,
         },
         error: {
@@ -151,7 +150,62 @@ const ThemeProvider: FC<{}> = ({ children }) => {
         },
       },
     })
-  }, [paletteType])
+  }
+
+  // Classic / V3 — original MUI blue/pink palette (Filter Deck V3 uses theme.primary)
+  return createTheme({
+    palette: {
+      mode: paletteType,
+      primary: {
+        main: paletteType === 'light' ? blue[700] : blue[200],
+      },
+      secondary: {
+        main: paletteType === 'light' ? darken(pink.A400, 0.1) : pink[200],
+      },
+      background: {
+        default: paletteType === 'light' ? '#fff' : '#121212',
+      },
+    },
+    components: {
+      MuiAppBar: {
+        styleOverrides:
+          paletteType === 'dark'
+            ? { colorPrimary: { color: '#fff', backgroundColor: '#333' } }
+            : {
+                colorPrimary: {
+                  backgroundColor: '#fff',
+                  color: 'rgba(0,0,0,0.54)',
+                },
+              },
+      },
+      MuiButton: {
+        styleOverrides:
+          paletteType === 'light' ? { root: { color: '#555' } } : {},
+      },
+    },
+  })
+}
+
+const ThemeProvider: FC<{}> = ({ children }) => {
+  const [themeOptions, dispatch] = useReducer<
+    Reducer<InitialThemeOptionsProps, Action>
+  >((state, action) => {
+    switch (action.type) {
+      case 'CHANGE':
+        return {
+          ...state,
+          ...action.payload,
+        }
+      default:
+        return state
+    }
+  }, InitialThemeOptions)
+
+  const { paletteType, uiTheme } = themeOptions
+  const theme = useMemo(
+    () => createAppTheme(paletteType, uiTheme),
+    [paletteType, uiTheme]
+  )
 
   const matches = useMediaQuery(theme.breakpoints.down('sm'), {
     defaultMatches: true,
@@ -170,18 +224,33 @@ const ThemeProvider: FC<{}> = ({ children }) => {
       ? 'dark'
       : 'light'
 
+    const nextUiTheme = readUiTheme()
+    dispatch({
+      type: 'CHANGE',
+      payload: { paletteType: newPaletteType, uiTheme: nextUiTheme },
+    })
+  }, [isDarkMode])
+
+  useEffect(() => {
     const themeColorMeta = document.querySelector('meta[name=theme-color]')
     const color =
-      newPaletteType === 'dark' ? V4.background : V4.light.background
+      uiTheme === 'v4'
+        ? paletteType === 'dark'
+          ? V4.background
+          : V4.light.background
+        : paletteType === 'dark'
+        ? '#121212'
+        : '#fff'
     themeColorMeta?.setAttribute('content', color)
-    dispatch({ type: 'CHANGE', payload: { paletteType: newPaletteType } })
-  }, [isDarkMode])
+  }, [paletteType, uiTheme])
 
   return (
     <StyledEngineProvider injectFirst>
       <MuiThemeProvider theme={theme}>
         <DispatchContext.Provider value={dispatch}>
-          <IsMobile.Provider value={matches}>{children}</IsMobile.Provider>
+          <UiThemeContext.Provider value={uiTheme}>
+            <IsMobile.Provider value={matches}>{children}</IsMobile.Provider>
+          </UiThemeContext.Provider>
         </DispatchContext.Provider>
       </MuiThemeProvider>
     </StyledEngineProvider>
@@ -197,4 +266,9 @@ export function useThemeState() {
 export function useIsmobile() {
   const matches = useContext(IsMobile)
   return matches
+}
+
+/** Current UI chrome theme (classic / v3 / v4). Updates live when Settings changes it. */
+export function useUiTheme(): UiThemeId {
+  return useContext(UiThemeContext)
 }

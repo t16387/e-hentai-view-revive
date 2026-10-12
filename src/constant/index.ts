@@ -20,3 +20,6 @@ export const languageMap: Record<string, string> = {
 
 /** When 'true', do not write browse/read history (localStorage). */
 export const LOCAL_DO_NOT_STORE_HISTORY = 'doNotStoreHistory'
+
+/** UI chrome theme: classic | v3 | v4 (localStorage string). */
+export const LOCAL_UI_THEME = 'uiTheme'

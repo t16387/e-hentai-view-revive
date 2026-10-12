@@ -3,7 +3,7 @@ import { V4 } from '@/design/v4Tokens'
 import CategoryChips from '@/components/search/CategoryChips'
 import { LOCAL_SEARCH_HISTORY } from '@/constant'
 import useEnhanceLocalStorageState from '@/hooks/useEnhanceLocalStorageState'
-import { useIsmobile } from '@/theme'
+import { useIsmobile, useUiTheme } from '@/theme'
 import {
   CAT_ALL,
   SearchFilters,
@@ -43,23 +43,114 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from 'next/router'
 import React, { useEffect, useRef, useState } from 'react'
 
-const useStyles = makeStyles((theme: Theme) => {
+/** Shared form chrome — theme-neutral. */
+const useBaseStyles = makeStyles(() =>
+  createStyles({
+    formroot: { flex: 1 },
+    input: {
+      fontSize: '1.25rem',
+      width: '100%',
+      '& ::-webkit-search-cancel-button': {
+        '-webkit-appearance': 'none',
+      },
+    },
+    inputEndIcon: { fontSize: 24, color: 'inherit' },
+  })
+)
+
+const useClassicStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    body: {
+      paddingTop: theme.spacing(1),
+      paddingBottom: theme.spacing(2),
+    },
+    actions: {
+      display: 'flex',
+      gap: theme.spacing(1),
+      marginTop: theme.spacing(1),
+      marginBottom: theme.spacing(2),
+    },
+  })
+)
+
+const useV3Styles = makeStyles((theme: Theme) =>
+  createStyles({
+    body: {
+      paddingTop: theme.spacing(1.5),
+      paddingBottom: theme.spacing(12),
+      maxWidth: 720,
+    },
+    stickyBar: {
+      position: 'fixed',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: theme.zIndex.appBar,
+      display: 'flex',
+      gap: theme.spacing(1),
+      padding: theme.spacing(1.25, 2),
+      paddingBottom: `calc(${theme.spacing(
+        1.25
+      )} + env(safe-area-inset-bottom, 0px))`,
+      backgroundColor: alpha(
+        theme.palette.background.paper,
+        theme.palette.mode === 'dark' ? 0.92 : 0.96
+      ),
+      backdropFilter: 'blur(8px)',
+      borderTop: `1px solid ${theme.palette.divider}`,
+      justifyContent: 'center',
+    },
+    stickyInner: {
+      display: 'flex',
+      gap: theme.spacing(1),
+      width: '100%',
+      maxWidth: 720,
+    },
+    applyBtn: {
+      flex: 1,
+      minHeight: 48,
+      borderRadius: 12,
+      fontWeight: 700,
+      textTransform: 'none',
+      fontSize: '1rem',
+    },
+    clearBtn: {
+      minHeight: 48,
+      minWidth: 96,
+      borderRadius: 12,
+      textTransform: 'none',
+      fontWeight: 600,
+    },
+    advancedBtn: {
+      minHeight: 44,
+      borderRadius: 999,
+      textTransform: 'none',
+      fontWeight: 600,
+      marginBottom: theme.spacing(1.5),
+    },
+    drawerPaper: {
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      maxHeight: '85vh',
+      padding: theme.spacing(2),
+      paddingBottom: `calc(${theme.spacing(
+        2
+      )} + env(safe-area-inset-bottom, 0px))`,
+    },
+    drawerTitle: {
+      fontWeight: 700,
+      marginBottom: theme.spacing(1),
+    },
+  })
+)
+
+const useV4Styles = makeStyles((theme: Theme) => {
   const dark = theme.palette.mode === 'dark'
   const primary = dark ? V4.primary : V4.light.primary
   const card = dark ? V4.card : V4.light.card
   const border = dark ? V4.border : V4.light.border
   const ring = dark ? V4.ring : V4.light.ring
   return createStyles({
-    formroot: { flex: 1 },
-    input: {
-      fontSize: '1.25rem',
-      width: '100%',
-      fontFamily: 'Inter, sans-serif',
-      '& ::-webkit-search-cancel-button': {
-        '-webkit-appearance': 'none',
-      },
-    },
-    inputEndIcon: { fontSize: 24, color: 'inherit' },
     body: {
       paddingTop: theme.spacing(1.5),
       paddingBottom: theme.spacing(12),
@@ -170,7 +261,11 @@ const emptyFilters = (): SearchFilters => ({})
 
 const Search = () => {
   const [t] = useTranslation()
-  const classes = useStyles()
+  const base = useBaseStyles()
+  const classic = useClassicStyles()
+  const v3 = useV3Styles()
+  const v4 = useV4Styles()
+  const uiTheme = useUiTheme()
   const router = useRouter()
   const theme = useTheme()
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'), {
@@ -228,7 +323,10 @@ const Search = () => {
     ref.current?.focus()
   }
 
-  const useSheet = Boolean(isPhone || matches)
+  const useSheet = uiTheme !== 'classic' && Boolean(isPhone || matches)
+  const chrome = uiTheme === 'v4' ? v4 : uiTheme === 'v3' ? v3 : null
+  const bodyClass =
+    uiTheme === 'classic' ? classic.body : uiTheme === 'v3' ? v3.body : v4.body
 
   return (
     <>
@@ -241,7 +339,7 @@ const Search = () => {
             action="/result"
             onSubmit={handleSubmit}
             method="GET"
-            className={classes.formroot}
+            className={base.formroot}
           >
             <InputBase
               placeholder={t('Search')}
@@ -258,7 +356,7 @@ const Search = () => {
               onChange={(e) =>
                 setFilters((f) => ({ ...f, f_search: e.target.value }))
               }
-              className={classes.input}
+              className={base.input}
               type="search"
             />
           </form>
@@ -269,7 +367,7 @@ const Search = () => {
                 setFilters((f) => ({ ...f, f_search: '' }))
                 ref.current?.focus()
               }}
-              className={classes.inputEndIcon}
+              className={base.inputEndIcon}
               size="large"
             >
               <CloseIcon />
@@ -278,15 +376,18 @@ const Search = () => {
         </Toolbar>
       </AppBar>
       <Toolbar />
-      <Container maxWidth="md" className={classes.body}>
+      <Container
+        maxWidth={uiTheme === 'classic' ? 'sm' : 'md'}
+        className={bodyClass}
+      >
         <CategoryChips
           included={included}
           onChange={setIncluded}
-          variant="deck"
+          variant={uiTheme === 'classic' ? 'compact' : 'deck'}
         />
-        {useSheet ? (
+        {useSheet && chrome ? (
           <Button
-            className={classes.advancedBtn}
+            className={chrome.advancedBtn}
             variant="outlined"
             startIcon={<TuneIcon />}
             onClick={() => setSheetOpen(true)}
@@ -296,6 +397,20 @@ const Search = () => {
           </Button>
         ) : (
           <AdvancedSearch value={filters} onChange={setFilters} />
+        )}
+        {uiTheme === 'classic' && (
+          <Box className={classic.actions} data-filter-actions="ehv-classic">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => handleGoResult(currentFilters())}
+            >
+              {t('Search.Apply')}
+            </Button>
+            <Button variant="outlined" onClick={handleClear}>
+              {t('Search.Clear')}
+            </Button>
+          </Box>
         )}
         <List>
           {searchHistories.map((o, k) => (
@@ -327,53 +442,60 @@ const Search = () => {
         </List>
       </Container>
 
-      <Box className={classes.stickyBar} data-filter-actions="ehv-v4">
-        <Box className={classes.stickyInner}>
+      {chrome && (
+        <Box
+          className={chrome.stickyBar}
+          data-filter-actions={uiTheme === 'v4' ? 'ehv-v4' : 'ehv-v3'}
+        >
+          <Box className={chrome.stickyInner}>
+            <Button
+              className={chrome.clearBtn}
+              variant="outlined"
+              onClick={handleClear}
+            >
+              {t('Search.Clear')}
+            </Button>
+            <Button
+              className={chrome.applyBtn}
+              variant="contained"
+              color="primary"
+              onClick={() => handleGoResult(currentFilters())}
+            >
+              {t('Search.Apply')}
+            </Button>
+          </Box>
+        </Box>
+      )}
+
+      {chrome && (
+        <Drawer
+          anchor="bottom"
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          classes={{ paper: chrome.drawerPaper }}
+          ModalProps={{ keepMounted: true }}
+        >
+          <Typography className={chrome.drawerTitle} variant="h6">
+            {t('Search.AdvancedSheet')}
+          </Typography>
+          <AdvancedSearch
+            value={filters}
+            onChange={setFilters}
+            variant="bare"
+            defaultOpen
+          />
           <Button
-            className={classes.clearBtn}
-            variant="outlined"
-            onClick={handleClear}
-          >
-            {t('Search.Clear')}
-          </Button>
-          <Button
-            className={classes.applyBtn}
             variant="contained"
             color="primary"
-            onClick={() => handleGoResult(currentFilters())}
+            fullWidth
+            className={chrome.applyBtn}
+            onClick={() => setSheetOpen(false)}
+            style={{ marginTop: 8 }}
           >
-            {t('Search.Apply')}
+            {t('Search.Done')}
           </Button>
-        </Box>
-      </Box>
-
-      <Drawer
-        anchor="bottom"
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        classes={{ paper: classes.drawerPaper }}
-        ModalProps={{ keepMounted: true }}
-      >
-        <Typography className={classes.drawerTitle} variant="h6">
-          {t('Search.AdvancedSheet')}
-        </Typography>
-        <AdvancedSearch
-          value={filters}
-          onChange={setFilters}
-          variant="bare"
-          defaultOpen
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          fullWidth
-          className={classes.applyBtn}
-          onClick={() => setSheetOpen(false)}
-          style={{ marginTop: 8 }}
-        >
-          {t('Search.Done')}
-        </Button>
-      </Drawer>
+        </Drawer>
+      )}
     </>
   )
 }

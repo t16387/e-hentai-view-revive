@@ -55,13 +55,14 @@ const ThemeMode = () => {
                   localStorage.setItem('paletteType', paletteType)
                 }
 
+                const nextPalette: 'dark' | 'light' =
+                  paletteType === 'auto'
+                    ? getSystemThemeMode()
+                    : (paletteType as 'dark' | 'light')
                 dispatch({
                   type: 'CHANGE',
                   payload: {
-                    paletteType:
-                      paletteType === 'auto'
-                        ? getSystemThemeMode()
-                        : paletteType,
+                    paletteType: nextPalette,
                   },
                 })
                 setOpen(false)
