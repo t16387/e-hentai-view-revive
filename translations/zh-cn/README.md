@@ -4,7 +4,7 @@
 
 <h1 align="center">EHentaiView</h1>
 
-[English](/README.md) | 简体中文
+[English](/README.md) | 简体中文 | [繁體中文](/translations/zh-tw/README.md) | [ภาษาไทย](/translations/th/README.md) | [한국어](/translations/kr/README.md) | [Bahasa Melayu](/translations/ms/README.md)
 
 **如果 Chrome 浏览器版本>=84，则会造成的无法查看图片** [点此修复](./FAQ.md#4-windows-浏览器看不到画廊图片)
 
