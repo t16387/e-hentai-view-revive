@@ -13,6 +13,7 @@ export const GALLERY_CONFIG = 'gallery_config'
 export const languageMap: Record<string, string> = {
   en: 'English',
   'zh-CN': '简体中文',
+  'zh-TW': '繁體中文',
   th: 'ภาษาไทย',
   kr: '한국어',
   ms: 'Bahasa Melayu',
