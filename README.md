@@ -53,7 +53,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open **http://localhost:3000** (change host port with `EHV_HOST_PORT`). Stop with `docker compose down`.
+Open **http://localhost:3000** (if port 3000 is taken, set `EHV_HOST_PORT=3001` in `.env` and open http://localhost:3001). Stop with `docker compose down`.
 
 | Goal | What to do |
 |------|------------|
@@ -68,11 +68,11 @@ Copy `.env.example` → `.env`. **Never commit `.env`.** Never put gallery cooki
 | Variable | Required? | Example | Purpose | If omitted |
 |----------|-----------|---------|---------|------------|
 | `EHV_SITE` | Optional default | `e-hentai` / `exhentai` | Server fallback site; in-app **Settings → Gallery site** overrides per request | **`e-hentai`** (Compose, app, bats) |
-| `EHV_HOST_PORT` | Optional | `3000` | Host port → container `8080` | **`3000`** |
+| `EHV_HOST_PORT` | Optional | `3000` / `3001` | **Docker:** host/browser port → container `8080`. **Local:** alias for `PORT` when `PORT` is unset | **`3000`** |
+| `PORT` | Optional (local) | `3000` / `3001` | **Bare Node / bats:** Node listen port (what the browser hits). **Compose:** always `8080` inside the container (do not use for host mapping) | Local default **`3000`** (bats); container **`8080`** |
 | `EHV_PROXY` | Optional | `http://host.docker.internal:7890` | Proxy for server→site fetches | Direct (no proxy) |
 | `EHV_USER_AGENT` | Optional | *(unset)* | Override upstream User-Agent | Built-in browser-like UA |
 | `NODE_ENV` | Set by Compose | `production` | Production mode | Image/Compose set it |
-| `PORT` | Set by Compose | `8080` | Port **inside** the container | `8080` |
 
 **`EHV_SITE=e-hentai`** — public site, anonymous OK. **`EHV_SITE=exhentai`** — needs Sign In in the app UI; cookies stay in your browser (HttpOnly), not in `.env` or the image.
 
@@ -81,12 +81,20 @@ Copy `.env.example` → `.env`. **Never commit `.env`.** Never put gallery cooki
 | | Docker Compose | `start.bat` / local pnpm |
 |--|----------------|--------------------------|
 | Toolchain | Docker only | Node ≥20 + pnpm + `pnpm build` |
-| Config | `.env` | Hardcoded in bat (`EHV_SITE=e-hentai`, `PORT=3000`) |
+| Config | `.env` (`EHV_HOST_PORT` for browser port) | `.env` / env (`PORT`, or `EHV_HOST_PORT` alias); bats default `PORT=3000` |
 | Default site | `e-hentai` | `e-hentai` (switch in Settings) |
+| Browser URL | http://localhost:**`EHV_HOST_PORT`** (→ container 8080) | http://localhost:**`PORT`** (default 3000) |
 | Best for | Notebooks, shared lab image | Local development |
 
-- `dev.bat` — Next + API for development (`EHV_SITE=e-hentai`). Browse http://localhost:3000
-- `start.bat` — production after `pnpm build` (`PORT=3000`). Prefer Docker on notebooks; see [DOCKER.md](DOCKER.md)
+**Change port when 3000 is in use**
+
+| Mode | What to set | Then open |
+|------|-------------|-----------|
+| Docker | `EHV_HOST_PORT=3001` in `.env`, then `docker compose up -d` | http://localhost:3001 |
+| Local bats | `set PORT=3001` then `start.bat` / `dev.bat`, **or** `PORT=3001` (or `EHV_HOST_PORT=3001`) in `.env` | http://localhost:3001 |
+
+- `dev.bat` — Next + API for development (`EHV_SITE=e-hentai`). API stays on **8080**; browse `PORT` (default 3000).
+- `start.bat` — production after `pnpm build`. Prefer Docker on notebooks; see [DOCKER.md](DOCKER.md)
 
 ### Security
 
@@ -118,8 +126,9 @@ yarn run dev:app
 
 ### Windows runners (no cross-env)
 
-- `dev.bat` — local Next + API (`EHV_SITE=e-hentai`). Browse http://localhost:3000
-- `start.bat` — production after `pnpm build` (`PORT=3000`). Prefer Docker on notebooks; see [DOCKER.md](DOCKER.md)
+- `dev.bat` — local Next + API (`EHV_SITE=e-hentai`). Browse http://localhost:3000 (or `PORT` / `EHV_HOST_PORT` from env/`.env`)
+- `start.bat` — production after `pnpm build`. Same port rules. Prefer Docker on notebooks; see [DOCKER.md](DOCKER.md)
+- Port conflict example: `set PORT=3001` then run the bat, or set `PORT=3001` in `.env`
 
 ## Thanks
 

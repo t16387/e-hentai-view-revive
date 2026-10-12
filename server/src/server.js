@@ -1,8 +1,10 @@
 // server.js
+require('dotenv').config()
+const { resolveListenPort } = require('./config/listenPort')
 const next = require('next')
 const devProxy = {
   '/api': {
-    target: 'http://localhost:8080', // 端口自己配置合适的
+    target: 'http://localhost:8080', // API process (dev.bat / dev:server)
     changeOrigin: true,
   },
 }
@@ -30,8 +32,10 @@ const handle = app.getRequestHandler()
   })
 
   if (dev) {
-    server.listen(3000, () => {
-      console.log(`app listening on http://localhost:3000`)
+    // Browser port: PORT, or EHV_HOST_PORT alias, default 3000 (see .env.example)
+    const listenPort = resolveListenPort(process.env, { defaultPort: 3000 })
+    server.listen(listenPort, () => {
+      console.log(`app listening on http://localhost:${listenPort}`)
     })
   }
 })()

@@ -27,7 +27,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open **http://localhost:3000** (or the port in `EHV_HOST_PORT`).
+Open **http://localhost:3000** (or the port in `EHV_HOST_PORT`). If **3000 is already in use**, set `EHV_HOST_PORT=3001` in `.env` and open http://localhost:3001.
 
 Stop: `docker compose down`.
 
@@ -64,7 +64,8 @@ Compose auto-reads `.env` for `${VAR}` substitution and passes selected vars int
 | Variable | Required? | Example (placeholder) | Purpose | If omitted |
 |----------|-----------|------------------------|---------|------------|
 | `EHV_SITE` | Optional default | `e-hentai` or `exhentai` | Server default when the SPA does not send `X-EHV-Site` / `ehv_site`. In-app **Settings → Gallery site** overrides per request. | Compose + app default: **`e-hentai`**. |
-| `EHV_HOST_PORT` | Optional | `3000` | Host port published to the browser → container `8080` | **`3000`** → open http://localhost:3000 |
+| `EHV_HOST_PORT` | Optional | `3000` / `3001` | **Docker:** host port published to the browser → container `8080`. Change this if 3000 is taken. **Local bats:** also used as an alias for `PORT` when `PORT` is unset. | **`3000`** → open http://localhost:3000 |
+| `PORT` | Optional (local only) | `3000` / `3001` | **Bare Node / `start.bat` / `dev.bat`:** Node listen port (browser URL). Compose **always** sets container `PORT=8080` — do not use `PORT` for Docker host mapping. | Local bats default **`3000`**; container **`8080`** |
 | `EHV_PROXY` | Optional | `http://host.docker.internal:7890` | HTTP(S) proxy for **server → site** requests | Empty: direct connection. (axios may still honour system `HTTP_PROXY` / `HTTPS_PROXY` if set elsewhere.) |
 | `EHV_USER_AGENT` | Optional | *(leave unset)* | Override User-Agent on upstream fetches | Built-in browser-like Chrome UA |
 
@@ -73,7 +74,7 @@ Compose auto-reads `.env` for `${VAR}` substitution and passes selected vars int
 | Variable | Set by | Typical value | Purpose | If omitted |
 |----------|--------|---------------|---------|------------|
 | `NODE_ENV` | Compose + Dockerfile | `production` | Next/server production mode | Image defaults to `production`; bare `start.bat` also sets it |
-| `PORT` | Compose + Dockerfile | `8080` | Listen port **inside** the container | App falls back to `8080`. Host mapping is `EHV_HOST_PORT`, not `PORT`. |
+| `PORT` | Compose + Dockerfile | `8080` | Listen port **inside** the container | App falls back to `8080` (or `EHV_HOST_PORT` if somehow unset). **Host/browser mapping is `EHV_HOST_PORT`, not this `PORT`.** |
 | `EHV_PROXY_TIMEOUT` | Optional (advanced) | `10000` | Timeout (ms) for image-proxy fetches to H@H nodes | **`10000`** |
 
 There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar in `.env`.
@@ -111,16 +112,27 @@ Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Docker
 | | **Docker Compose** | **`start.bat` / local pnpm** |
 |--|--------------------|------------------------------|
 | Needs | Docker Desktop (or Engine) + loaded/built image | Node ≥20, pnpm, `pnpm install` + `pnpm build` |
-| Config | `.env` from `.env.example` | Hardcoded in bat / shell env (`EHV_SITE=e-hentai`, `PORT=3000`) |
-| Default site | `e-hentai` (Compose) | `exhentai` (`start.bat` / `dev.bat`) |
-| Browser URL | http://localhost:**3000** (`EHV_HOST_PORT` → container 8080) | http://localhost:**3000** (Node listens on 3000 in `start.bat`) |
+| Config | `.env` from `.env.example` | `.env` / shell env; bats read `PORT` / `EHV_HOST_PORT` (default listen **3000**) |
+| Default site | `e-hentai` (Compose) | `e-hentai` (`start.bat` / `dev.bat`; switch in Settings) |
+| Browser URL | http://localhost:**`EHV_HOST_PORT`** (→ container 8080) | http://localhost:**`PORT`** (default 3000; `EHV_HOST_PORT` aliases if `PORT` unset) |
 | Prod vs rebuild | Change `.env` → restart container. Change code → rebuild image on lab, reload tar on Windows. | Change code → `pnpm build` again, then `start.bat`. |
 | Best for | Notebooks, “just run it”, sharing one lab image | Active development without Docker |
 
+### Changing the port (3000 already in use)
+
+One mental model: **edit `.env`**, then restart.
+
+| Mode | Set in `.env` (or shell) | Restart / run | Open |
+|------|--------------------------|---------------|------|
+| **Docker Compose** | `EHV_HOST_PORT=3001` | `docker compose up -d` | http://localhost:3001 |
+| **Local `start.bat` / `dev.bat`** | `PORT=3001` **or** `EHV_HOST_PORT=3001` (alias), **or** `set PORT=3001` before the bat | re-run the bat | http://localhost:3001 |
+
+Compose keeps the process on **8080 inside the container**; only the host publish port changes. Local bare Node listens on `PORT` directly (what the browser hits). `dev.bat` keeps the API on **8080** and only moves the Next/browser port.
+
 | File | Mode | What it does |
 |------|------|----------------|
-| `start.bat` | production | Sets `EHV_SITE=exhentai`, `NODE_ENV=production`, `PORT=3000`, then `node server\src\server.js`. Does **not** use `pnpm start` / cross-env (those can exit silently on some PCs). Needs `.next` from `pnpm build`. |
-| `dev.bat` | development | Sets `EHV_SITE=exhentai`, `NODE_ENV=development`. API on **:8080** (`nodemon server\src\app.js`) and Next on **:3000** (`node server\src\server.js`). Browse **http://localhost:3000**. |
+| `start.bat` | production | Sets `EHV_SITE=e-hentai`, `NODE_ENV=production`, resolves `PORT` (env → `.env` → `EHV_HOST_PORT` → `3000`), then `node server\src\server.js`. Does **not** overwrite an already-set `PORT`. Does **not** use `pnpm start` / cross-env. Needs `.next` from `pnpm build`. |
+| `dev.bat` | development | Sets `EHV_SITE=e-hentai`, `NODE_ENV=development`. API on **:8080** (`nodemon server\src\app.js`, `PORT=8080` forced). Next on **:`PORT`** (default 3000). Browse **http://localhost:`PORT`**. |
 
 Double-click from the project root (or run from `cmd`). Prefer Docker load+compose when you do not want a local Node toolchain.
 
@@ -130,7 +142,7 @@ Double-click from the project root (or run from `cmd`). Prefer Docker load+compo
 2. Obtain `ehentai-view-revive.tar.gz` (lab build) and the project folder / `ehv-source-latest.zip`.
 3. `docker load -i ehentai-view-revive.tar.gz` — confirm tag `ehentai-view:revive`.
 4. `copy .env.example .env` then `docker compose up -d` (**no** `--build`).
-5. Browse to `http://localhost:3000`.
+5. Browse to `http://localhost:3000` (or `EHV_HOST_PORT` from `.env` if you changed it).
 
 If upstream is blocked on your network, set `EHV_PROXY` to your local proxy. On Docker Desktop, `host.docker.internal` reaches the host (e.g. `http://host.docker.internal:7890`).
 

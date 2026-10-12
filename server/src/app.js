@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const bodyParser = require('body-parser')
 // const cors = require('cors')
@@ -118,7 +119,8 @@ app.use((err, req, res, next) => {
   res.status(200).send({ error: true, code: err && err.code, message })
 })
 
-const PORT = process.env.PORT || 8080
+const { resolveListenPort } = require('./config/listenPort')
+const PORT = resolveListenPort(process.env, { defaultPort: 8080 })
 app.listen(PORT, () => {
   console.log(
     `app listening on http://localhost:${PORT}, env: ${
