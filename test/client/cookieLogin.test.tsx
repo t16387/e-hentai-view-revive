@@ -100,4 +100,18 @@ describe('CookieLogin', () => {
     })
     expect(localStorage.getItem(LEGACY_COOKIE_STORAGE_KEY)).toBeNull()
   })
+  it('does not link to email/password login', async () => {
+    const onSubmit = vi.fn()
+    await act(async () => {
+      render(
+        <ThemeProvider theme={createTheme()}>
+          <CookieLogin onSubmit={onSubmit} />
+        </ThemeProvider>,
+        container
+      )
+    })
+    expect(container.querySelector('a[href="/signin"]')).toBeNull()
+    expect(container.querySelector('#ipb_member_id')).toBeTruthy()
+  })
+
 })

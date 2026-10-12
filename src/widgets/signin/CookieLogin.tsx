@@ -1,5 +1,4 @@
 import { UserPayload } from '@/apis'
-import Link from '@/components/Link'
 import { Button, TextField, Typography } from '@mui/material'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
@@ -21,6 +20,10 @@ const useStyles = makeStyles((theme: Theme) =>
       margin: theme.spacing(3, 0, 2),
       fontSize: 'large',
       boxShadow: theme.shadows[16],
+    },
+    hint: {
+      marginTop: theme.spacing(1),
+      marginBottom: theme.spacing(1),
     },
   })
 )
@@ -63,6 +66,14 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
       className={classes.form}
       noValidate
     >
+      <Typography
+        variant="body2"
+        color="textSecondary"
+        className={classes.hint}
+      >
+        {t('SignIn.CookieHint')}
+      </Typography>
+
       <Controller
         name="ipb_member_id"
         control={control}
@@ -122,14 +133,11 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
             label="igneous"
             id="igneous"
             autoComplete="off"
+            helperText={t('SignIn.IgneousHint')}
             {...field}
           />
         )}
       />
-
-      <Typography align="right">
-        <Link href="/signin">{t('SignIn.Email')}</Link>
-      </Typography>
 
       <Button
         type="submit"
@@ -138,7 +146,7 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
         color="primary"
         className={classes.submit}
       >
-        {t('SignIn')}
+        {t('SignIn.SaveCookies')}
       </Button>
     </form>
   )
