@@ -102,6 +102,25 @@ Copy `.env.example` → `.env`. **Never commit `.env`.** Never put gallery cooki
 - Do not bake `ipb_member_id` / `ipb_pass_hash` / `igneous` into Dockerfiles, Compose, or git.
 - `.dockerignore` keeps `.env*` out of the build context.
 
+## Revive changes (summary)
+
+Branch **`revive`** modernizes the original EHentaiView app so it works against current e-hentai/exhentai markup, ships a safer auth model, and is easier to run (Docker or bare Node). High-level themes for contributors:
+
+| Area | What changed |
+|------|----------------|
+| **Toolchain** | **pnpm 10**, **Node ≥ 20** (`engines`), **Next 12.3.7**, **Vitest** (`pnpm test`). Multi-stage **Dockerfile** (Node 22) and pnpm-based CI. Prefer `pnpm` over npm/yarn for local work. |
+| **Parsing** | List, detail, and image-page parsers updated for current upstream HTML; sad-panda / blank upstream pages reported instead of empty lists. |
+| **Search** | Category bitmask + Advanced query builders; richer `/search` UI; filters wired through list API, index, and result pages. **AI-generated tag filter** (Include / Exclude / Only). **Cursor-based** gallery paging (favorites/watched included). Multi-tag select → Confirm from gallery detail. |
+| **Reader / images** | Image queue with prefetch, cancellation, hedging, and `nl=` retries; Tap to reload; mode switch keeps page index; RTL-aware arrows/tap zones; Browser Back returns to the gallery. Proxy: timeouts, abort on client disconnect, redirect allowlist, HTTPS-only cookies to default ports, refuse private DNS for `*.hath.network`. |
+| **Security / auth** | **Web cookie login only** (paste cookies after signing in on the forums/site in your browser). **No email/password** login in the UI. Cookies are **HttpOnly + SameSite=Lax** (+ Secure on HTTPS); secrets are not stored in `localStorage`. CSRF checks, path-only logs, comment HTML sanitizer (gallery links kept), per-user cache keys, closed open-proxy paths. |
+| **Gallery site** | In-app **Settings → Gallery site**: **e-hentai** / **exhentai**. Default **`e-hentai`** (anonymous OK). ExHentai needs Sign In; cookies stay in the browser, never in `.env` or the image. |
+| **UI themes** | Settings: **Classic**, **V3**, **V4** (category chips, filter rail / Filter Deck, pagers). Design notes: [UI-V3.md](UI-V3.md), `design-system/`. |
+| **Docker + env** | Compose stack, tagged image `ehentai-view:revive`, `.env.example` → `.env` (gitignored). Everyday Windows: **load tar + `docker compose up -d`** (no `--build`). Full steps: **[DOCKER.md](DOCKER.md)**. |
+| **Configurable port** | Docker: `EHV_HOST_PORT` (host → container `8080`). Local / bats: `PORT` (or `EHV_HOST_PORT` alias). Default browser port **3000**. |
+| **Windows bats** | `dev.bat` (Next + API) and `start.bat` (production after `pnpm build`). Default `EHV_SITE=e-hentai`. |
+
+There is no separate UAT checklist in-tree; use **DOCKER.md** for run/verify, **UI-V3.md** / `design-system/` for UI chrome, and `pnpm test` for unit coverage (parser/CSRF/proxy/list modes, etc.).
+
 ## FAQ
 
 If you can't see the picture, please see [here](/translations/en/FAQ.md)
