@@ -61,3 +61,13 @@ Browser Chrome at localhost still uses cookie-paste (see LOGIN.md).
 | `EHV_APP_URL` | `http://127.0.0.1:3000` | URL the Electron window loads |
 
 Never put gallery cookies in `.env` or the image.
+
+## Smoke (no secrets)
+
+```bat
+cd desktop
+set EHV_APP_URL=http://127.0.0.1:3000
+pnpm exec electron scripts/smoke-webview.js
+```
+
+Expect `SMOKE PASS` and exit code 0. Does not complete a real login.

@@ -37,3 +37,10 @@ pnpm dist:win   # portable under dist/
 ```
 
 Linux CI boxes may lack Windows build tooling; shipping `desktop/` source + scripts is enough. Prefer building the portable on the Windows notebook.
+
+## Smoke test (no real login)
+
+```bash
+pnpm exec electron scripts/smoke-webview.js
+# expects app at EHV_APP_URL; opens forums in BrowserView; exits 0 on success
+```

@@ -13,7 +13,8 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win portable --x64",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "smoke": "electron scripts/smoke-webview.js"
   },
   "dependencies": {},
   "devDependencies": {
