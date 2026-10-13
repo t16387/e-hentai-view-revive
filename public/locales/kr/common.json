@@ -185,5 +185,15 @@
   "SignIn.BrowserLogin": "Browser login (recommended)",
   "SignIn.BrowserLoginHint": "Same idea as EhViewer/JHenTai WebView login: you solve Turnstile in a real browser tab. Then paste cookies here — localhost cannot read forums cookies automatically (no WebView CookieManager).",
   "SignIn.PasswordFallback": "Try username / password (FlareSolverr)",
-  "SignIn.PasswordFallbackHint": "Server posts to forums via FlareSolverr when configured. Often blocked by interactive Turnstile — use Browser login instead."
+  "SignIn.PasswordFallbackHint": "Server posts to forums via FlareSolverr when configured. Often blocked by interactive Turnstile — use Browser login instead.",
+  "SignIn.infoElectron": "You are in the Electron desktop shell. Sign in with the in-app WebView (same pattern as EhViewer / JHenTai): solve Cloudflare Turnstile on forums.e-hentai.org; cookies are captured automatically — no paste.",
+  "SignIn.WebViewLogin": "Sign in with WebView (recommended)",
+  "SignIn.WebViewLoginHint": "Opens forums login inside this window. After you sign in, ipb_member_id / ipb_pass_hash (and igneous when available) are applied automatically.",
+  "SignIn.WebViewLoginInfo": "Stay in the embedded view until login finishes. Press Escape or Cancel to abort.",
+  "SignIn.OpenWebViewLogin": "Sign in with WebView",
+  "SignIn.CancelWebViewLogin": "Cancel WebView sign-in",
+  "SignIn.WebViewOpenFailed": "Could not open the login WebView",
+  "SignIn.WebViewLoadFailed": "Login page failed to load",
+  "SignIn.PasteFallback": "Paste cookies manually (fallback)",
+  "SignIn.PasteFallbackHint": "Only needed if WebView capture fails. Same fields as browser login."
 }

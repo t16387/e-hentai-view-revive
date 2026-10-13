@@ -36,6 +36,18 @@ see more detail https://hub.docker.com/r/ironkinoko/e-hentai-view
 
 <img src="https://raw.githubusercontent.com/IronKinoko/asset/master/e-hentai-view/login.gif" width="25%" title="login"/>
 
+## Desktop shell (Electron WebView login)
+
+For Windows notebooks that already run the app via Docker at **http://localhost:3000**, use the Electron shell so **Sign In** opens forums **inside the app window** and captures cookies (no paste):
+
+```bat
+docker compose up -d
+desktop.bat
+```
+
+Or: `cd desktop && pnpm install && set EHV_APP_URL=http://127.0.0.1:3000 && pnpm start`.  
+Env: `EHV_APP_URL` (default `http://127.0.0.1:3000`). Details: **[LOGIN.md](LOGIN.md)** and `desktop/README.md`.
+
 ## Docker & environment (revive)
 
 This **revive** branch ships a Compose stack and a tagged image `ehentai-view:revive`. Everyday use on Windows is **load a pre-built tar + `docker compose up -d`** (no local Node, no `--build`). Full steps, Windows checklist, and image details: **[DOCKER.md](DOCKER.md)**.
@@ -116,7 +128,7 @@ Branch **`revive`** modernizes the original EHentaiView app so it works against 
 | **Parsing** | List, detail, and image-page parsers updated for current upstream HTML; sad-panda / blank upstream pages reported instead of empty lists. |
 | **Search** | Category bitmask + Advanced query builders; richer `/search` UI; filters wired through list API, index, and result pages. **AI-generated tag filter** (Include / Exclude / Only). **Cursor-based** gallery paging (favorites/watched included). Multi-tag select → Confirm from gallery detail. |
 | **Reader / images** | Image queue with prefetch, cancellation, hedging, and `nl=` retries; Tap to reload; mode switch keeps page index; RTL-aware arrows/tap zones; Browser Back returns to the gallery. Proxy: timeouts, abort on client disconnect, redirect allowlist, HTTPS-only cookies to default ports, refuse private DNS for `*.hath.network`. |
-| **Security / auth** | **Browser login** (recommended): open forums in a new tab, solve Cloudflare Turnstile yourself, paste cookie dump (`ipb_member_id` / `ipb_pass_hash` / optional `igneous`) — closest web equivalent to EhViewer/JHenTai WebView login (localhost cannot read cross-origin cookies). Optional username/password via **FlareSolverr** (often blocked by interactive Turnstile). Session cookies stored as **HttpOnly + SameSite=Lax**; never in `localStorage`. CSRF checks, path-only logs, comment HTML sanitizer, per-user cache keys. See `/workspace/ehv-analysis/login-peer-research.md` (analysis) / DOCKER.md. |
+| **Security / auth** | **Electron desktop** (`desktop/`, `desktop.bat`): in-bound BrowserView login — solve Turnstile inside the app; cookies captured automatically (EhViewer/JHenTai pattern). **Browser** at localhost: paste cookie dump (no cross-origin CookieManager). Optional username/password via **FlareSolverr**. Session cookies **HttpOnly + SameSite=Lax**; never in `localStorage`. See [LOGIN.md](LOGIN.md). |
 | **Gallery site** | In-app **Settings → Gallery site**: **e-hentai** / **exhentai**. Default **`e-hentai`** (anonymous OK). ExHentai needs Sign In; cookies stay in the browser, never in `.env` or the image. |
 | **UI themes** | Settings: **Classic**, **V3**, **V4** (category chips, filter rail / Filter Deck, pagers). Design notes: [UI-V3.md](UI-V3.md), `design-system/`. |
 | **Docker + env** | Compose stack, tagged image `ehentai-view:revive`, `.env.example` → `.env` (gitignored). Everyday Windows: **load tar + `docker compose up -d`** (no `--build`). Full steps: **[DOCKER.md](DOCKER.md)**. |

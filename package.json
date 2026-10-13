@@ -34,7 +34,11 @@
     "test:watch": "vitest",
     "start": "cross-env NODE_ENV=production node server/src/server.js",
     "release": "node scripts/release.js",
-    "prepare": "husky install || true"
+    "prepare": "husky install || true",
+    "desktop": "pnpm --dir desktop start",
+    "desktop:install": "pnpm --dir desktop install",
+    "desktop:dist:win": "pnpm --dir desktop dist:win",
+    "test:desktop": "pnpm --dir desktop test"
   },
   "lint-staged": {
     "{pages,public,server,src,script}/**/*.{js,jsx,ts,tsx}": [

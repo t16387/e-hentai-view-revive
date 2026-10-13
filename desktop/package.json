@@ -1,0 +1,58 @@
+{
+  "name": "ehentai-view-desktop",
+  "productName": "EHentaiView",
+  "version": "4.2.0",
+  "description": "Electron shell for e-hentai-view — in-bound WebView login (EhViewer/JHenTai pattern)",
+  "main": "src/main.js",
+  "private": true,
+  "author": "e-hentai-view revive",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win portable --x64",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.ehentaiview.desktop",
+    "productName": "EHentaiView",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "src/main.js"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "EHentaiView-${version}-portable.${ext}"
+    },
+    "portable": {
+      "artifactName": "EHentaiView-${version}-portable.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Network"
+    }
+  }
+}
