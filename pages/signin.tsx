@@ -1,11 +1,9 @@
 import { login, UserPayload } from '@/apis'
 import message from '@/components/message'
 import { languageMap } from '@/constant'
-import { isElectronShell } from '@/utils/electronBridge'
 import { LanguageSlideUpDialog } from '@/widgets/setting/Language'
 import CookieLogin from '@/widgets/signin/CookieLogin'
 import Login from '@/widgets/signin/Login'
-import WebViewLogin from '@/widgets/signin/WebViewLogin'
 import {
   Accordion,
   AccordionDetails,
@@ -51,12 +49,10 @@ const SignIn: NextPage = () => {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [electron, setElectron] = useState(false)
   const [t, i18n] = useTranslation()
 
   useEffect(() => {
     cache.clear()
-    setElectron(isElectronShell())
     return () => {
       cache.clear()
     }
@@ -115,47 +111,17 @@ const SignIn: NextPage = () => {
         </Typography>
 
         <Box m="16px 0">
-          <Alert severity="info">
-            {electron ? t('SignIn.infoElectron') : t('SignIn.info')}
-          </Alert>
+          <Alert severity="info">{t('SignIn.info')}</Alert>
         </Box>
 
-        {/* Electron: in-bound WebView (primary). Browser: cookie paste. */}
-        {electron ? <WebViewLogin onSubmit={onSubmit} /> : null}
-
-        {electron ? (
-          <Accordion
-            elevation={0}
-            className={classes.password}
-            defaultExpanded={false}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="cookie-paste-login"
-              id="cookie-paste-login-header"
-            >
-              <Typography variant="body2" color="textSecondary">
-                {t('SignIn.PasteFallback')}
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails style={{ flexDirection: 'column', padding: 0 }}>
-              <Alert severity="info" style={{ marginBottom: 8 }}>
-                {t('SignIn.PasteFallbackHint')}
-              </Alert>
-              <CookieLogin onSubmit={onSubmit} />
-            </AccordionDetails>
-          </Accordion>
-        ) : (
-          <>
-            <Typography variant="h6" component="h2" className={classes.section}>
-              {t('SignIn.BrowserLogin')}
-            </Typography>
-            <Alert severity="warning" style={{ marginBottom: 8 }}>
-              {t('SignIn.BrowserLoginHint')}
-            </Alert>
-            <CookieLogin onSubmit={onSubmit} />
-          </>
-        )}
+        {/* Peer WebView-equivalent: open real forums, paste cookies (no iframe — CF blocks) */}
+        <Typography variant="h6" component="h2" className={classes.section}>
+          {t('SignIn.BrowserLogin')}
+        </Typography>
+        <Alert severity="warning" style={{ marginBottom: 8 }}>
+          {t('SignIn.BrowserLoginHint')}
+        </Alert>
+        <CookieLogin onSubmit={onSubmit} />
 
         <Accordion
           elevation={0}

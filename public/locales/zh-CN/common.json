@@ -184,15 +184,5 @@
   "SignIn.BrowserLogin": "Browser login (recommended)",
   "SignIn.BrowserLoginHint": "Same idea as EhViewer/JHenTai WebView login: you solve Turnstile in a real browser tab. Then paste cookies here — localhost cannot read forums cookies automatically (no WebView CookieManager).",
   "SignIn.PasswordFallback": "Try username / password (FlareSolverr)",
-  "SignIn.PasswordFallbackHint": "Server posts to forums via FlareSolverr when configured. Often blocked by interactive Turnstile — use Browser login instead.",
-  "SignIn.infoElectron": "当前为 Electron 桌面壳。请使用应用内 WebView 登录（与 EhViewer / JHenTai 相同）：在 forums.e-hentai.org 完成 Cloudflare Turnstile，Cookie 会自动捕获，无需粘贴。",
-  "SignIn.WebViewLogin": "使用 WebView 登录（推荐）",
-  "SignIn.WebViewLoginHint": "在本窗口内打开论坛登录页。登录成功后自动应用 ipb_member_id / ipb_pass_hash（以及可用的 igneous）。",
-  "SignIn.WebViewLoginInfo": "请在嵌入视图中完成登录。按 Esc 或取消可中止。",
-  "SignIn.OpenWebViewLogin": "使用 WebView 登录",
-  "SignIn.CancelWebViewLogin": "取消 WebView 登录",
-  "SignIn.WebViewOpenFailed": "无法打开登录 WebView",
-  "SignIn.WebViewLoadFailed": "登录页加载失败",
-  "SignIn.PasteFallback": "手动粘贴 Cookie（备用）",
-  "SignIn.PasteFallbackHint": "仅在 WebView 捕获失败时使用，字段与浏览器登录相同。"
+  "SignIn.PasswordFallbackHint": "Server posts to forums via FlareSolverr when configured. Often blocked by interactive Turnstile — use Browser login instead."
 }

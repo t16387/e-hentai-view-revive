@@ -28,15 +28,10 @@ fs-*.json
 ehv-err.txt
 ehv-out.txt
 docker-build*.log
-# Electron desktop deps/artifacts (not needed in Next/Express image)
-desktop/node_modules
-desktop/dist
-desktop/dist-*/
 # Windows local noise
 ehv-docker-*.txt
 ehv-docker-*.log
 ehv-docker-build.pid
-ehv-desktop-delta.tgz
 ehentai-view-revive-webview.tar.gz*
 revive-src.zip
 *.part0*
