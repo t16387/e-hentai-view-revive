@@ -8,6 +8,7 @@ import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
 import FavoriteIcon from '@mui/icons-material/Favorite'
+import GetAppIcon from '@mui/icons-material/GetApp'
 import HistoryIcon from '@mui/icons-material/History'
 import HomeIcon from '@mui/icons-material/Home'
 import SubscriptionsIcon from '@mui/icons-material/Subscriptions'
@@ -16,15 +17,22 @@ import clsx from 'clsx'
 import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
 import React, { forwardRef } from 'react'
+import useShowDownloadsNav from '@/hooks/useShowDownloadsNav'
 import SafeArea from './SafeArea'
-const MENU = [
+
+const BASE_MENU = [
   { title: 'FrontPage', icon: <HomeIcon />, link: '/' },
   { title: 'Watched', icon: <SubscriptionsIcon />, link: '/watched' },
   { title: 'Popular', icon: <WhatshotIcon />, link: '/popular' },
   { title: 'Favorites', icon: <FavoriteIcon />, link: '/favorites' },
   { title: 'Histories', icon: <HistoryIcon />, link: '/histories' },
-  // { title: 'Settings', icon: <SettingsIcon />, link: '/settings' },
 ]
+
+const DOWNLOADS_ITEM = {
+  title: 'Downloads',
+  icon: <GetAppIcon />,
+  link: '/downloads',
+}
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -49,6 +57,8 @@ const EHBottomNavigartor = forwardRef<HTMLDivElement>((_, ref) => {
   const router = useRouter()
   const classes = useStyles()
   const trigger = useScrollTrigger()
+  const [showDownloads] = useShowDownloadsNav()
+  const MENU = showDownloads ? [...BASE_MENU, DOWNLOADS_ITEM] : BASE_MENU
   const index = MENU.findIndex((v) => {
     let pathname = router.pathname
     if (v.link === '/') {

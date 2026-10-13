@@ -63,6 +63,8 @@ const CSRF_PATHS = [
   '/api/user/logout',
   '/api/user/setting',
   '/api/user/site',
+  '/api/downloads',
+  '/api/cache/clear',
 ]
 
 app.use((req, res, next) => {
@@ -106,6 +108,8 @@ app.use('/api/popular', require('./popular/popularRouter'))
 app.use('/api/watched', require('./watched/watchedRouter'))
 app.use('/api/favorites', require('./favorites/favoritesRouter'))
 app.use('/api/user', require('./user/userRouter'))
+app.use('/api/downloads', require('./downloads/downloadRouter'))
+app.use('/api/cache', require('./cacheRouter'))
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {

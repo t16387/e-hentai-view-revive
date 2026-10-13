@@ -27,3 +27,6 @@ export const LOCAL_UI_THEME = 'uiTheme'
 
 /** Upstream gallery site: e-hentai | exhentai (localStorage string). */
 export const LOCAL_EHV_SITE = 'ehvSite'
+
+/** When 'true', show Downloads in bottom/desktop nav (default). */
+export const LOCAL_SHOW_DOWNLOADS_NAV = 'showDownloadsNav'

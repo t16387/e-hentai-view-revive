@@ -39,3 +39,6 @@ tsconfig.tsbuildinfo
 .env
 .env.*
 !.env.example
+
+# local gallery downloads (server-side)
+/data

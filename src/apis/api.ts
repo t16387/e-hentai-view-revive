@@ -88,3 +88,70 @@ export async function setSitePreference(site: EhvSiteId) {
     }>('/api/user/site', { site })
   ).data
 }
+
+export interface DownloadItem {
+  id: string
+  gid: string
+  token: string
+  title: string
+  title_jpn: string
+  thumb: string
+  category: string
+  filecount: number
+  status: 'queued' | 'running' | 'complete' | 'error'
+  done: number
+  total: number
+  error?: string | null
+  createdAt?: number
+  updatedAt?: number
+  hasZip?: boolean
+  files?: ({ ext: string; size: number } | null)[]
+}
+
+export async function fetchDownloads() {
+  return (
+    await axios.get<{ error: boolean; list: DownloadItem[] }>('/api/downloads')
+  ).data
+}
+
+export async function fetchDownload(id: string) {
+  return (
+    await axios.get<{
+      error: boolean
+      download: DownloadItem
+      message?: string
+    }>(`/api/downloads/${id}`)
+  ).data
+}
+
+export async function startDownload(gid: string, token: string) {
+  return (
+    await axios.post<{
+      error: boolean
+      download: DownloadItem
+      message?: string
+    }>('/api/downloads', { gid, token })
+  ).data
+}
+
+export async function deleteDownload(id: string) {
+  return (
+    await axios.delete<{ error: boolean; removed?: boolean; message?: string }>(
+      `/api/downloads/${id}`
+    )
+  ).data
+}
+
+export async function clearAllDownloads() {
+  return (
+    await axios.delete<{ error: boolean; removed: number }>('/api/downloads')
+  ).data
+}
+
+export async function clearServerCache() {
+  return (
+    await axios.post<{ error: boolean; cleared: number; message: string }>(
+      '/api/cache/clear'
+    )
+  ).data
+}

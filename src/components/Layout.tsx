@@ -18,6 +18,7 @@ import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import FavoriteIcon from '@mui/icons-material/Favorite'
+import GetAppIcon from '@mui/icons-material/GetApp'
 import HistoryIcon from '@mui/icons-material/History'
 import HomeIcon from '@mui/icons-material/Home'
 import SearchIcon from '@mui/icons-material/Search'
@@ -29,6 +30,7 @@ import { useTranslation } from 'next-i18next'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import React from 'react'
+import useShowDownloadsNav from '@/hooks/useShowDownloadsNav'
 import { UrlObject } from 'url'
 import EHBottomNavigartor from './EHBottomNavigartor'
 
@@ -70,13 +72,18 @@ const useStyles = makeStyles((theme: Theme) =>
   })
 )
 
-const MENU = [
+const BASE_MENU = [
   { title: 'FrontPage', icon: <HomeIcon />, link: '/' },
   { title: 'Watched', icon: <SubscriptionsIcon />, link: '/watched' },
   { title: 'Popular', icon: <WhatshotIcon />, link: '/popular' },
   { title: 'Favorites', icon: <FavoriteIcon />, link: '/favorites' },
   { title: 'Histories', icon: <HistoryIcon />, link: '/histories' },
 ]
+const DOWNLOADS_ITEM = {
+  title: 'Downloads',
+  icon: <GetAppIcon />,
+  link: '/downloads',
+}
 
 const SettingsMenuInfo = {
   title: 'Settings',
@@ -108,6 +115,8 @@ const Layout: React.FunctionComponent<Props> = ({
   const classes = useStyles()
   const [t] = useTranslation()
   const router = useRouter()
+  const [showDownloads] = useShowDownloadsNav()
+  const MENU = showDownloads ? [...BASE_MENU, DOWNLOADS_ITEM] : BASE_MENU
   return (
     <>
       <Head>

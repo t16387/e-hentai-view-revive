@@ -37,6 +37,7 @@ import FavIconButton from './FavIconButton'
 import InfoCard from './InfoCard'
 import TagList from './TagList'
 import TorrentIconButton from './TorrentIconButton'
+import DownloadIconButton from './DownloadIconButton'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
 
 /** reader route for a gallery, resuming at the saved page when there is one */
@@ -224,6 +225,7 @@ const Info: React.FC<InfoProps> = ({ info, tagList }) => {
               startIcon={<MenuBookIcon />}
             />
             <TorrentIconButton info={info} />
+            <DownloadIconButton info={info} />
             <FavIconButton info={info} />
             <Tooltip title={t('OpenEH') as string}>
               <a href={info.url} target="_blank" rel="noreferrer">
@@ -351,6 +353,7 @@ const MobileInfo: React.FC<InfoProps> = ({ info, tagList }) => {
                 onClose={handleClose}
               >
                 <FavIconButton info={info} inMenu onClick={handleClose} />
+                <DownloadIconButton info={info} inMenu onClick={handleClose} />
                 <MenuItem onClick={handleSimilar}>
                   <ListItemIcon color="primary">
                     <PageviewIcon />

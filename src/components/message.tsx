@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import MessageSnackbar from './Snackebar'
-import ThemeProvider from 'src/theme'
+import ThemeProvider from '@/theme'
 import { StyledEngineProvider } from '@mui/material'
 
 interface SnackbarWrapProps {
