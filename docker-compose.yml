@@ -8,8 +8,8 @@
 #   sudo docker save ehentai-view:revive | gzip > ehentai-view-revive.tar.gz
 # Then open http://localhost:3000 (or EHV_HOST_PORT from .env if 3000 is taken)
 #
-# Auth: in-app username/password Sign In. forums.e-hentai.org Cloudflare is
-# bypassed via the flaresolverr service (EHV_FLARESOLVERR_URL). Never put
+# Auth: Browser login (open forums + paste cookies) is recommended. Password+FlareSolverr
+# may still fail on Turnstile (EHV_FLARESOLVERR_URL). Never put
 # gallery cookies or passwords in .env or the image.
 # Host/browser port = EHV_HOST_PORT (default 3000) → container PORT 8080.
 

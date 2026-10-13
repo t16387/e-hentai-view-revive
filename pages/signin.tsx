@@ -36,8 +36,11 @@ const useStyles = makeStyles((theme) => ({
     zIndex: theme.zIndex.drawer + 1,
     color: '#fff',
   },
-  advanced: {
-    marginTop: theme.spacing(3),
+  section: {
+    marginTop: theme.spacing(2),
+  },
+  password: {
+    marginTop: theme.spacing(1),
   },
 }))
 
@@ -88,7 +91,7 @@ const SignIn: NextPage = () => {
   }
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="sm">
       <div className={classes.paper}>
         <Typography variant="h4" component="h6" gutterBottom>
           <Box
@@ -111,23 +114,34 @@ const SignIn: NextPage = () => {
           <Alert severity="info">{t('SignIn.info')}</Alert>
         </Box>
 
-        <Login onSubmit={onSubmit} />
+        {/* Peer WebView-equivalent: open real forums, paste cookies (no iframe — CF blocks) */}
+        <Typography variant="h6" component="h2" className={classes.section}>
+          {t('SignIn.BrowserLogin')}
+        </Typography>
+        <Alert severity="warning" style={{ marginBottom: 8 }}>
+          {t('SignIn.BrowserLoginHint')}
+        </Alert>
+        <CookieLogin onSubmit={onSubmit} />
 
-        <Accordion elevation={0} className={classes.advanced}>
+        <Accordion
+          elevation={0}
+          className={classes.password}
+          defaultExpanded={false}
+        >
           <AccordionSummary
             expandIcon={<ExpandMoreIcon />}
-            aria-controls="advanced-cookie-login"
-            id="advanced-cookie-login-header"
+            aria-controls="password-login"
+            id="password-login-header"
           >
             <Typography variant="body2" color="textSecondary">
-              {t('SignIn.AdvancedCookie')}
+              {t('SignIn.PasswordFallback')}
             </Typography>
           </AccordionSummary>
           <AccordionDetails style={{ flexDirection: 'column', padding: 0 }}>
-            <Alert severity="warning" style={{ marginBottom: 8 }}>
-              {t('SignIn.AdvancedCookieHint')}
+            <Alert severity="info" style={{ marginBottom: 8 }}>
+              {t('SignIn.PasswordFallbackHint')}
             </Alert>
-            <CookieLogin onSubmit={onSubmit} />
+            <Login onSubmit={onSubmit} />
           </AccordionDetails>
         </Accordion>
 

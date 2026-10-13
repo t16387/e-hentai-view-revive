@@ -93,8 +93,12 @@ There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar i
 
 ### Auth / cookies (ExHentai)
 
-1. Open the app (default site is e-hentai) and use **Sign In**: enter your e-hentai forums username and password. The server logs in on your behalf (via **FlareSolverr** when `EHV_FLARESOLVERR_URL` is set) and stores session cookies as HttpOnly on the app origin. Passwords are never saved.
-2. **FlareSolverr** (required for password login past Cloudflare on `forums.e-hentai.org`):
+1. Open the app (default site is e-hentai) → **Sign In** → **Browser login** (recommended):
+   - Tap **Open forums login** (new tab), solve Cloudflare Turnstile, sign in on forums.e-hentai.org.
+   - DevTools → Application → Cookies → copy `ipb_member_id`, `ipb_pass_hash`, and (for ExHentai) `igneous`, or paste a full cookie dump into the dump field.
+   - **Save cookies & sign in**. The server stores them as HttpOnly on this origin. Native apps (EhViewer/JHenTai) do this inside a WebView; a localhost SPA cannot capture cross-origin cookies automatically.
+2. Optional: expand **Try username / password (FlareSolverr)**. This often fails on interactive Turnstile — use Browser login instead.
+3. **FlareSolverr** (only for the password path on `forums.e-hentai.org`):
    - Compose default: `EHV_FLARESOLVERR_URL=http://flaresolverr:8191/v1` (the `flaresolverr` service on the same compose network). Host port **8191** is also published for debugging.
    - External solver: `EHV_FLARESOLVERR_URL=http://host.docker.internal:8191/v1`.
    - Official FlareSolverr supports `request.post`. Byparr-compatible solvers are **GET-only**; the app falls back to clearance-cookie + direct POST when POST is unavailable.

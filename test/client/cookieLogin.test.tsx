@@ -75,13 +75,6 @@ describe('CookieLogin', () => {
     const id = container.querySelector('#ipb_member_id') as HTMLInputElement
     const hash = container.querySelector('#ipb_pass_hash') as HTMLInputElement
     await act(async () => {
-      id.value = '123'
-      id.dispatchEvent(new Event('input', { bubbles: true }))
-      hash.value = 'abcdef'
-      hash.dispatchEvent(new Event('input', { bubbles: true }))
-    })
-    // react-hook-form needs change events that update Controller
-    await act(async () => {
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
         window.HTMLInputElement.prototype,
         'value'
@@ -100,6 +93,7 @@ describe('CookieLogin', () => {
     })
     expect(localStorage.getItem(LEGACY_COOKIE_STORAGE_KEY)).toBeNull()
   })
+
   it('does not link to email/password login', async () => {
     const onSubmit = vi.fn()
     await act(async () => {
@@ -114,4 +108,47 @@ describe('CookieLogin', () => {
     expect(container.querySelector('#ipb_member_id')).toBeTruthy()
   })
 
+  it('shows cookie dump field and forums open button', async () => {
+    const onSubmit = vi.fn()
+    await act(async () => {
+      render(
+        <ThemeProvider theme={createTheme()}>
+          <CookieLogin onSubmit={onSubmit} />
+        </ThemeProvider>,
+        container
+      )
+    })
+    expect(container.querySelector('#cookie_dump')).toBeTruthy()
+    expect(container.querySelector('#open-forums-login')).toBeTruthy()
+  })
+
+  it('fills fields from a pasted cookie dump', async () => {
+    const onSubmit = vi.fn()
+    await act(async () => {
+      render(
+        <ThemeProvider theme={createTheme()}>
+          <CookieLogin onSubmit={onSubmit} />
+        </ThemeProvider>,
+        container
+      )
+    })
+    const dump = container.querySelector('#cookie_dump') as HTMLTextAreaElement
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      'value'
+    )!.set!
+    await act(async () => {
+      nativeSetter.call(
+        dump,
+        'ipb_member_id=42; ipb_pass_hash=hashhash; igneous=igval'
+      )
+      dump.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    const id = container.querySelector('#ipb_member_id') as HTMLInputElement
+    const hash = container.querySelector('#ipb_pass_hash') as HTMLInputElement
+    const ig = container.querySelector('#igneous') as HTMLInputElement
+    expect(id.value).toBe('42')
+    expect(hash.value).toBe('hashhash')
+    expect(ig.value).toBe('igval')
+  })
 })

@@ -1,10 +1,16 @@
 import { UserPayload } from '@/apis'
+import {
+  EH_FORUMS_LOGIN_URL,
+  hasRequiredEhCookies,
+  parseEhCookieDump,
+} from '@/utils/parseEhCookieDump'
 import { Button, TextField, Typography } from '@mui/material'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { useTranslation } from 'next-i18next'
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 /** legacy key that used to store cookie login secrets in localStorage */
@@ -13,7 +19,7 @@ export const LEGACY_COOKIE_STORAGE_KEY = 'cookie'
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     form: {
-      width: '100%', // Fix IE 11 issue.
+      width: '100%',
       marginTop: theme.spacing(1),
     },
     submit: {
@@ -25,8 +31,16 @@ const useStyles = makeStyles((theme: Theme) =>
       marginTop: theme.spacing(1),
       marginBottom: theme.spacing(1),
     },
+    openBtn: {
+      marginBottom: theme.spacing(1),
+    },
+    dump: {
+      marginTop: theme.spacing(1),
+      marginBottom: theme.spacing(1),
+    },
   })
 )
+
 const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
   onSubmit,
 }) => {
@@ -34,6 +48,7 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
   const {
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<UserPayload>({
     mode: 'onSubmit',
@@ -44,6 +59,8 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
     },
   })
   const [t] = useTranslation()
+  const [dump, setDump] = useState('')
+  const [dumpError, setDumpError] = useState<string | null>(null)
 
   // never keep secrets in localStorage; clear any leftover from older builds
   useEffect(() => {
@@ -53,6 +70,34 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
       /* private mode */
     }
   }, [])
+
+  const applyDump = (text: string) => {
+    setDump(text)
+    setDumpError(null)
+    const parsed = parseEhCookieDump(text)
+    if (!hasRequiredEhCookies(parsed)) {
+      if (text.trim()) {
+        setDumpError(t('SignIn.CookieDumpInvalid'))
+      }
+      return
+    }
+    setValue('ipb_member_id', parsed.ipb_member_id || '', {
+      shouldValidate: true,
+      shouldDirty: true,
+    })
+    setValue('ipb_pass_hash', parsed.ipb_pass_hash || '', {
+      shouldValidate: true,
+      shouldDirty: true,
+    })
+    setValue('igneous', parsed.igneous || '', {
+      shouldValidate: true,
+      shouldDirty: true,
+    })
+  }
+
+  const openForumsLogin = () => {
+    window.open(EH_FORUMS_LOGIN_URL, '_blank', 'noopener,noreferrer')
+  }
 
   return (
     <form
@@ -74,6 +119,35 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
         {t('SignIn.CookieHint')}
       </Typography>
 
+      <Button
+        type="button"
+        id="open-forums-login"
+        fullWidth
+        variant="outlined"
+        color="primary"
+        className={classes.openBtn}
+        startIcon={<OpenInNewIcon />}
+        onClick={openForumsLogin}
+      >
+        {t('SignIn.OpenForumsLogin')}
+      </Button>
+
+      <TextField
+        className={classes.dump}
+        margin="normal"
+        fullWidth
+        multiline
+        minRows={3}
+        id="cookie_dump"
+        label={t('SignIn.CookieDump')}
+        placeholder="ipb_member_id=…; ipb_pass_hash=…; igneous=…"
+        autoComplete="off"
+        value={dump}
+        onChange={(e) => applyDump(e.target.value)}
+        error={!!dumpError}
+        helperText={dumpError || t('SignIn.CookieDumpHint')}
+      />
+
       <Controller
         name="ipb_member_id"
         control={control}
@@ -89,7 +163,6 @@ const CookieLogin: React.FC<{ onSubmit: (v: UserPayload) => any }> = ({
             id="ipb_member_id"
             label="ipb_member_id"
             autoComplete="off"
-            autoFocus
             error={!!errors.ipb_member_id}
             helperText={
               errors.ipb_member_id ? t('SignIn.RequiredField') : undefined
