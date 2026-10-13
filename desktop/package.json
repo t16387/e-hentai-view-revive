@@ -43,7 +43,8 @@
           ]
         }
       ],
-      "artifactName": "EHentaiView-${version}-portable.${ext}"
+      "artifactName": "EHentaiView-${version}-portable.${ext}",
+      "signAndEditExecutable": false
     },
     "portable": {
       "artifactName": "EHentaiView-${version}-portable.${ext}"
