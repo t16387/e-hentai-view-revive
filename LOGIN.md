@@ -2,6 +2,8 @@
 
 ## Electron desktop shell (recommended on Windows)
 
+Short runbook: **[DESKTOP.md](DESKTOP.md)**.
+
 Native clients (**EhViewer**, **JHenTai**) embed a **WebView** that loads `forums.e-hentai.org`. You solve Cloudflare Turnstile inside that WebView; the app then reads `ipb_member_id` / `ipb_pass_hash` from the WebView cookie store.
 
 This repo ships an **Electron** shell under `desktop/` that does the same:

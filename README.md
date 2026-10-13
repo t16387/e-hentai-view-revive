@@ -46,7 +46,7 @@ desktop.bat
 ```
 
 Or: `cd desktop && pnpm install && set EHV_APP_URL=http://127.0.0.1:3000 && pnpm start`.  
-Env: `EHV_APP_URL` (default `http://127.0.0.1:3000`). Details: **[LOGIN.md](LOGIN.md)** and `desktop/README.md`.
+Env: `EHV_APP_URL` (default `http://127.0.0.1:3000`). Details: **[DESKTOP.md](DESKTOP.md)**, [LOGIN.md](LOGIN.md), `desktop/README.md`.
 
 ## Docker & environment (revive)
 
