@@ -2,6 +2,7 @@
 .github
 .husky
 .vscode
+.agents
 .next
 node_modules
 coverage
@@ -15,3 +16,15 @@ coverage
 # local download storage (never bake into the image)
 data
 downloads
+# local image/transfer artifacts (Windows notebook)
+parts
+_build_revive
+*.tar.gz
+*.tar.gz.*
+ehentai-view-revive.tar.gz*
+ehv-*.tar.gz*
+ehv-*-src.tar.gz
+fs-*.json
+ehv-err.txt
+ehv-out.txt
+docker-build*.log
