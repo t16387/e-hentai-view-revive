@@ -8,16 +8,10 @@
 #   sudo docker save ehentai-view:revive | gzip > ehentai-view-revive.tar.gz
 # Then open http://localhost:3000 (or EHV_HOST_PORT from .env if 3000 is taken)
 #
-# Compose auto-reads `.env` for ${VAR} substitution. Auth: in-app Sign In
-# (username/password). Never put gallery cookies or passwords in .env or the image.
+# Auth: in-app username/password Sign In. forums.e-hentai.org Cloudflare is
+# bypassed via the flaresolverr service (EHV_FLARESOLVERR_URL). Never put
+# gallery cookies or passwords in .env or the image.
 # Host/browser port = EHV_HOST_PORT (default 3000) → container PORT 8080.
-#
-# Downloads: host ${EHV_DOWNLOADS_HOST:-./downloads} → /app/data/downloads in the
-# container (EHV_DOWNLOADS_DIR). Clear-downloads / offline zips use that path.
-#
-# FlareSolverr: password Sign In posts to forums.e-hentai.org through a solver
-# when EHV_FLARESOLVERR_URL is set. On Windows Docker Desktop the default points
-# at a host-published solver (port 8191). Optional profile `solver` starts one.
 
 services:
   ehv:
@@ -36,13 +30,13 @@ services:
       EHV_SITE: ${EHV_SITE:-e-hentai}
       EHV_PROXY: ${EHV_PROXY:-}
       EHV_USER_AGENT: ${EHV_USER_AGENT:-}
-      EHV_FLARESOLVERR_URL: ${EHV_FLARESOLVERR_URL:-http://host.docker.internal:8191/v1}
-      # Fixed container path; host folder is bind-mounted below
+      # Same-compose DNS (preferred). Override for an external solver if needed.
+      EHV_FLARESOLVERR_URL: ${EHV_FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
       EHV_DOWNLOADS_DIR: /app/data/downloads
     volumes:
-      # Host path (default: ./downloads under the compose project dir) → container downloads
-      # Override with EHV_DOWNLOADS_HOST=. to use the project directory itself
       - ${EHV_DOWNLOADS_HOST:-./downloads}:/app/data/downloads
+    depends_on:
+      - flaresolverr
     restart: unless-stopped
     healthcheck:
       test:
@@ -57,14 +51,13 @@ services:
       retries: 3
       start_period: 40s
 
-  # Optional: docker compose --profile solver up -d
-  # Official FlareSolverr (request.get + request.post). Byparr elsewhere is GET-only.
+  # Official FlareSolverr (request.get + request.post). Used only for password login.
   flaresolverr:
-    profiles: ["solver"]
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: ehv-flaresolverr
     environment:
       LOG_LEVEL: info
     ports:
+      # Optional host publish for debugging; ehv uses the service name on the compose network.
       - "${EHV_FLARESOLVERR_HOST_PORT:-8191}:8191"
     restart: unless-stopped

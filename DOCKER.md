@@ -95,8 +95,8 @@ There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar i
 
 1. Open the app (default site is e-hentai) and use **Sign In**: enter your e-hentai forums username and password. The server logs in on your behalf (via **FlareSolverr** when `EHV_FLARESOLVERR_URL` is set) and stores session cookies as HttpOnly on the app origin. Passwords are never saved.
 2. **FlareSolverr** (required for password login past Cloudflare on `forums.e-hentai.org`):
-   - Windows Docker Desktop default: `EHV_FLARESOLVERR_URL=http://host.docker.internal:8191/v1` with a solver published on host port **8191** (`docker compose --profile solver up -d` or any FlareSolverr container `-p 8191:8191`).
-   - Same Docker network: `EHV_FLARESOLVERR_URL=http://flaresolverr:8191/v1`.
+   - Compose default: `EHV_FLARESOLVERR_URL=http://flaresolverr:8191/v1` (the `flaresolverr` service on the same compose network). Host port **8191** is also published for debugging.
+   - External solver: `EHV_FLARESOLVERR_URL=http://host.docker.internal:8191/v1`.
    - Official FlareSolverr supports `request.post`. Byparr-compatible solvers are **GET-only**; the app falls back to clearance-cookie + direct POST when POST is unavailable.
    - If the solver cannot clear Turnstile, Sign In returns `code: "flaresolverr"` (not a bare Cloudflare page). Use **Advanced** cookie paste as fallback, or update/restart the solver.
 3. In **Settings → Gallery site**, switch to **exhentai.org** (requires login cookies + valid `igneous`; password login tries to obtain `igneous` when possible).
