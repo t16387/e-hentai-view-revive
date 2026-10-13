@@ -93,13 +93,14 @@ There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar i
 
 ### Auth / cookies (ExHentai)
 
-1. Open the app (default site is e-hentai) and use **Sign In**: enter your e-hentai forums username and password. The server logs in on your behalf and stores session cookies as HttpOnly on the app origin. Passwords are never saved. If Cloudflare or a captcha blocks password login, expand **Advanced** and paste cookies instead.
-2. In **Settings → Gallery site**, switch to **exhentai.org** (requires login cookies + valid `igneous`; password login tries to obtain `igneous` when possible).
-3. Session cookies stay in **your browser** (HttpOnly on the app origin). The Node server forwards them upstream; they are **never** written into the image, Compose file, or `.env`.
-
-Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Dockerfiles, or git. A lab-only secrets file used for offline live-check scripts is unrelated to Compose and must stay off this repo.
-
-**Never bake cookies into the image.** `.dockerignore` excludes `.env*` (except `.env.example`) so a rebuild cannot copy local secrets into the build context.
+1. Open the app (default site is e-hentai) and use **Sign In**: enter your e-hentai forums username and password. The server logs in on your behalf (via **FlareSolverr** when `EHV_FLARESOLVERR_URL` is set) and stores session cookies as HttpOnly on the app origin. Passwords are never saved.
+2. **FlareSolverr** (required for password login past Cloudflare on `forums.e-hentai.org`):
+   - Windows Docker Desktop default: `EHV_FLARESOLVERR_URL=http://host.docker.internal:8191/v1` with a solver published on host port **8191** (`docker compose --profile solver up -d` or any FlareSolverr container `-p 8191:8191`).
+   - Same Docker network: `EHV_FLARESOLVERR_URL=http://flaresolverr:8191/v1`.
+   - Official FlareSolverr supports `request.post`. Byparr-compatible solvers are **GET-only**; the app falls back to clearance-cookie + direct POST when POST is unavailable.
+   - If the solver cannot clear Turnstile, Sign In returns `code: "flaresolverr"` (not a bare Cloudflare page). Use **Advanced** cookie paste as fallback, or update/restart the solver.
+3. In **Settings → Gallery site**, switch to **exhentai.org** (requires login cookies + valid `igneous`; password login tries to obtain `igneous` when possible).
+4. Session cookies stay in **your browser** (HttpOnly on the app origin). The Node server forwards them upstream; they are **never** written into the image, Compose file, or `.env`.
 
 
 ## Downloads volume (offline manga)

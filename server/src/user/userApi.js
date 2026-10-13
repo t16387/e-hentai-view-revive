@@ -8,9 +8,10 @@ const axios = require('../axios')
 const qs = require('qs')
 const { getCookieString, parseCookieToJSON } = require('../utils/cookies')
 const { parseLogin, parseCookieLogin } = require('./userPrser')
+const flare = require('./flareSolverr')
 
 const FORUMS_BLOCKED =
-  'forums.e-hentai.org answered with a Cloudflare challenge. In-app password login cannot complete from this server. Use Advanced → cookie login, or set EHV_PROXY to an egress that can pass the forums challenge.'
+  'forums.e-hentai.org answered with a Cloudflare challenge. Set EHV_FLARESOLVERR_URL to a reachable FlareSolverr /v1 endpoint (see DOCKER.md), or use Advanced → cookie login.'
 
 const LOGIN_HEADERS = {
   'Content-Type': 'application/x-www-form-urlencoded',
@@ -19,10 +20,200 @@ const LOGIN_HEADERS = {
   Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 }
 
+const FORUMS_LOGIN_GET = `${loginURL}?act=Login&CODE=00`
+const FORUMS_LOGIN_POST = `${loginURL}?act=Login&CODE=01`
+
+function buildLoginPostData(UserName, PassWord) {
+  return qs.stringify({
+    referer: 'https://e-hentai.org/bounce_login.php?b=d&bt=1-1',
+    b: 'd',
+    bt: '1-1',
+    CookieDate: 1,
+    UserName,
+    PassWord,
+    ipb_login_submit: 'Login!',
+  })
+}
+
+function finishFromHtmlAndCookies(html, cookieObj) {
+  const message = parseLogin(typeof html === 'string' ? html : '')
+  const cookie = { ...cookieObj }
+  if (!cookie.ipb_member_id || !cookie.ipb_pass_hash) {
+    throw new UpstreamError(
+      'login',
+      'Login response had no session cookies. Try Advanced cookie login.'
+    )
+  }
+  return { message, cookie }
+}
+
+/**
+ * Password login via FlareSolverr (when EHV_FLARESOLVERR_URL is set).
+ * 1) Prefer request.post (official FlareSolverr).
+ * 2) Else session + GET (Turnstile) then request.post with cookies.
+ * 3) Else GET clearance then direct axios POST with solver UA + cookies.
+ */
+async function loginViaFlareSolverr(UserName, PassWord) {
+  const postData = buildLoginPostData(UserName, PassWord)
+  let lastErr = null
+
+  // --- 1) direct request.post ---
+  try {
+    const result = await flare.solverPost(FORUMS_LOGIN_POST, postData, {
+      maxTimeout: 120000,
+    })
+    if (!/Just a moment/i.test(result.html)) {
+      const finished = finishFromHtmlAndCookies(result.html, result.cookies)
+      finished.cookie = await attachIgneous(finished.cookie)
+      return finished
+    }
+    lastErr = new UpstreamError(
+      'flaresolverr',
+      'FlareSolverr POST still returned a Cloudflare challenge page'
+    )
+  } catch (e) {
+    lastErr = e
+  }
+
+  // --- 2) persistent session: GET (tabs_till_verify) then POST ---
+  let session = null
+  try {
+    session = await flare.createSession()
+    const cleared = await flare.solverGet(FORUMS_LOGIN_GET, {
+      session,
+      maxTimeout: 120000,
+      tabsTillVerify: 1,
+    })
+    if (/Just a moment/i.test(cleared.html)) {
+      throw new UpstreamError(
+        'flaresolverr',
+        'FlareSolverr could not clear the forums Cloudflare/Turnstile challenge'
+      )
+    }
+
+    try {
+      const posted = await flare.solverPost(FORUMS_LOGIN_POST, postData, {
+        session,
+        cookies: cleared.cookies,
+        maxTimeout: 120000,
+      })
+      const finished = finishFromHtmlAndCookies(posted.html, {
+        ...cleared.cookies,
+        ...posted.cookies,
+      })
+      finished.cookie = await attachIgneous(finished.cookie)
+      return finished
+    } catch (postErr) {
+      // Byparr has no request.post — fall through to axios POST with clearance
+      if (postErr && postErr.code === 'flaresolverr') {
+        const axiosResult = await loginWithClearance(
+          UserName,
+          PassWord,
+          cleared.cookies,
+          cleared.userAgent
+        )
+        return axiosResult
+      }
+      throw postErr
+    }
+  } catch (e) {
+    lastErr = e
+  } finally {
+    await flare.destroySession(session)
+  }
+
+  // --- 3) GET without session, then axios POST ---
+  try {
+    const cleared = await flare.solverGet(FORUMS_LOGIN_GET, {
+      maxTimeout: 120000,
+      tabsTillVerify: 1,
+    })
+    if (/Just a moment/i.test(cleared.html)) {
+      throw new UpstreamError(
+        'flaresolverr',
+        'FlareSolverr could not clear the forums Cloudflare/Turnstile challenge'
+      )
+    }
+    return await loginWithClearance(
+      UserName,
+      PassWord,
+      cleared.cookies,
+      cleared.userAgent
+    )
+  } catch (e) {
+    lastErr = e
+  }
+
+  if (lastErr) throw lastErr
+  throw new UpstreamError(
+    'flaresolverr',
+    'FlareSolverr login failed for an unknown reason'
+  )
+}
+
+/** Direct POST using CF clearance cookies + matching User-Agent from the solver */
+async function loginWithClearance(
+  UserName,
+  PassWord,
+  clearanceCookies,
+  userAgent
+) {
+  const cookieHeader = flare.cookieHeaderFromObj(clearanceCookies)
+  const res = await axios.request({
+    url: FORUMS_LOGIN_POST,
+    validateStatus: () => true,
+    method: 'POST',
+    headers: {
+      ...LOGIN_HEADERS,
+      ...(userAgent ? { 'User-Agent': userAgent } : {}),
+      ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+    },
+    maxRedirects: 0,
+    data: buildLoginPostData(UserName, PassWord),
+  })
+
+  if (isCloudflareChallenge(res)) {
+    throw new UpstreamError(
+      'flaresolverr',
+      'Clearance cookies from FlareSolverr were not accepted for the login POST (Cloudflare challenged again). Try updating FlareSolverr or use Advanced cookie login.'
+    )
+  }
+
+  const fromHeaders = parseCookieToJSON(res.headers['set-cookie'])
+  const finished = finishFromHtmlAndCookies(
+    typeof res.data === 'string' ? res.data : '',
+    { ...clearanceCookies, ...fromHeaders }
+  )
+  finished.cookie = await attachIgneous(finished.cookie)
+  return finished
+}
+
+async function loginDirect(UserName, PassWord) {
+  const res = await axios.request({
+    url: FORUMS_LOGIN_POST,
+    validateStatus: () => true,
+    method: 'POST',
+    headers: LOGIN_HEADERS,
+    maxRedirects: 0,
+    data: buildLoginPostData(UserName, PassWord),
+  })
+
+  if (isCloudflareChallenge(res)) {
+    throw new UpstreamError('cloudflare', FORUMS_BLOCKED)
+  }
+
+  const cookie = parseCookieToJSON(res.headers['set-cookie'])
+  const finished = finishFromHtmlAndCookies(
+    typeof res.data === 'string' ? res.data : '',
+    cookie
+  )
+  finished.cookie = await attachIgneous(finished.cookie)
+  return finished
+}
+
 /**
  * POST username/password to the forums login endpoint.
  * Never log PassWord / Set-Cookie values.
- * On success, optionally attach igneous by visiting exhentai.
  */
 async function login(payload) {
   const { UserName, PassWord } = payload || {}
@@ -30,46 +221,12 @@ async function login(payload) {
     throw new UpstreamError('validation', 'Username and password are required')
   }
 
-  const res = await axios.request({
-    url: `${loginURL}?act=Login&CODE=01`,
-    validateStatus: () => true,
-    method: 'POST',
-    headers: LOGIN_HEADERS,
-    maxRedirects: 0,
-    data: qs.stringify({
-      referer: 'https://e-hentai.org/bounce_login.php?b=d&bt=1-1',
-      b: 'd',
-      bt: '1-1',
-      CookieDate: 1,
-      UserName,
-      PassWord,
-      ipb_login_submit: 'Login!',
-    }),
-  })
-
-  if (isCloudflareChallenge(res)) {
-    throw new UpstreamError('cloudflare', FORUMS_BLOCKED)
+  if (flare.isConfigured()) {
+    return loginViaFlareSolverr(UserName, PassWord)
   }
-
-  const message = parseLogin(typeof res.data === 'string' ? res.data : '')
-  const cookie = parseCookieToJSON(res.headers['set-cookie'])
-
-  if (!cookie.ipb_member_id || !cookie.ipb_pass_hash) {
-    throw new UpstreamError(
-      'login',
-      'Login succeeded but no session cookies were returned. Try Advanced cookie login.'
-    )
-  }
-
-  const withIgneous = await attachIgneous(cookie)
-  return { message, cookie: withIgneous }
+  return loginDirect(UserName, PassWord)
 }
 
-/**
- * After forums login (or when igneous is missing), visit exhentai once so the
- * Set-Cookie chain can yield igneous. Forums remoteapi may still hit Cloudflare;
- * failures are non-fatal for e-hentai-only use.
- */
 async function attachIgneous(cookie) {
   if (cookie.igneous && cookie.igneous !== 'mystery') return cookie
   try {
@@ -134,16 +291,12 @@ async function validateLogin(
   if (res && res.status === 200 && !isCloudflareChallenge(res)) {
     return parseCookieLogin(res.data)
   }
-  // the forums are unreachable from servers (Cloudflare): verify the
-  // cookies against the gallery site itself instead
   return validateOnSite(cookies, site)
 }
 
-/** read-only check that the cookies are accepted by the configured site */
 async function validateOnSite(cookies, site) {
   const { siteName, baseURL } = site || getSite()
   if (siteName === 'exhentai') {
-    // throws [sad panda] when exhentai rejects the cookies
     const { document } = await fetchPage(`${baseURL}/`, {
       cookies: cookies + '; nw=1',
       siteName,
@@ -153,7 +306,6 @@ async function validateOnSite(cookies, site) {
     }
     return 'You are now logged in (verified on exhentai.org)'
   }
-  // e-hentai: home.php needs a login, anonymous requests are redirected
   const res = await axios.get('https://e-hentai.org/home.php', {
     headers: { Cookie: cookies },
     maxRedirects: 0,
@@ -179,4 +331,6 @@ module.exports = {
   getUserSetting,
   attachIgneous,
   fetchIgneous,
+  loginViaFlareSolverr,
+  loginDirect,
 }

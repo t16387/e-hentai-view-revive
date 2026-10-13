@@ -113,7 +113,7 @@ docker compose up -d
 | **解析** | 列表、詳情與圖片頁解析器已對應現行上游 HTML；sad-panda／空白上游頁會回報，而非空列表。 |
 | **搜尋** | 分類 bitmask + Advanced 查詢建構；更豐富的 `/search` UI；篩選串聯列表 API、首頁與結果頁。**AI 產生標籤篩選**（包含／排除／僅 AI）。**游標式**圖庫分頁（含收藏／訂閱）。多標籤選取 → 從圖庫詳情確認。 |
 | **閱讀器／圖片** | 圖片佇列含預取、取消、hedging 與 `nl=` 重試；點擊重新載入；切換模式保留頁碼；RTL 方向鍵／點擊區；瀏覽器返回回到圖庫。代理：逾時、客戶端斷線中止、重新導向白名單、僅 HTTPS Cookie 至預設埠、拒絕 `*.hath.network` 的私有 DNS。 |
-| **安全性／驗證** | **應用內登入**：輸入 e-hentai 帳號／密碼（伺服器代向論壇登入，以 **HttpOnly + SameSite=Lax** Cookie 存於本站；密碼不儲存）。若 Cloudflare／驗證碼阻擋，可用**進階**手動貼 Cookie。密鑰不存 `localStorage` 或映像。CSRF 檢查、僅路徑日誌、留言 HTML 淨化（保留圖庫連結）、依使用者快取鍵、關閉開放代理路徑。 |
+| **安全性／驗證** | **應用內登入**：輸入 e-hentai 帳號／密碼（設定 `EHV_FLARESOLVERR_URL` 時經 **FlareSolverr** 代向論壇登入，以 **HttpOnly + SameSite=Lax** Cookie 存於本站；密碼不儲存）。若 solver／驗證碼阻擋，可用**進階**手動貼 Cookie。密鑰不存 `localStorage` 或映像。CSRF 檢查、僅路徑日誌、留言 HTML 淨化（保留圖庫連結）、依使用者快取鍵、關閉開放代理路徑。 |
 | **圖庫站點** | 應用內 **設定 → 圖庫站點**：**e-hentai**／**exhentai**。預設 **`e-hentai`**（可匿名）。ExHentai 需登入；Cookie 留在瀏覽器，永不進 `.env` 或映像。 |
 | **UI 主題** | 設定：**經典**、**V3**、**V4**（分類晶片、篩選欄／Filter Deck、分頁器）。設計說明：[UI-V3.md](../../UI-V3.md)、`design-system/`。 |
 | **Docker + 環境** | Compose 堆疊、標籤映像 `ehentai-view:revive`、`.env.example` → `.env`（gitignore）。Windows 日常：**載入 tar + `docker compose up -d`**（不加 `--build`）。完整步驟：**[DOCKER.md](../../DOCKER.md)**。 |

@@ -14,6 +14,10 @@
 #
 # Downloads: host ${EHV_DOWNLOADS_HOST:-./downloads} → /app/data/downloads in the
 # container (EHV_DOWNLOADS_DIR). Clear-downloads / offline zips use that path.
+#
+# FlareSolverr: password Sign In posts to forums.e-hentai.org through a solver
+# when EHV_FLARESOLVERR_URL is set. On Windows Docker Desktop the default points
+# at a host-published solver (port 8191). Optional profile `solver` starts one.
 
 services:
   ehv:
@@ -24,12 +28,15 @@ services:
     container_name: ehv
     ports:
       - "${EHV_HOST_PORT:-3000}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       PORT: "8080"
       EHV_SITE: ${EHV_SITE:-e-hentai}
       EHV_PROXY: ${EHV_PROXY:-}
       EHV_USER_AGENT: ${EHV_USER_AGENT:-}
+      EHV_FLARESOLVERR_URL: ${EHV_FLARESOLVERR_URL:-http://host.docker.internal:8191/v1}
       # Fixed container path; host folder is bind-mounted below
       EHV_DOWNLOADS_DIR: /app/data/downloads
     volumes:
@@ -49,3 +56,15 @@ services:
       timeout: 5s
       retries: 3
       start_period: 40s
+
+  # Optional: docker compose --profile solver up -d
+  # Official FlareSolverr (request.get + request.post). Byparr elsewhere is GET-only.
+  flaresolverr:
+    profiles: ["solver"]
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: ehv-flaresolverr
+    environment:
+      LOG_LEVEL: info
+    ports:
+      - "${EHV_FLARESOLVERR_HOST_PORT:-8191}:8191"
+    restart: unless-stopped
