@@ -69,6 +69,13 @@ function createMainWindow() {
 
   mainWindow.loadURL(APP_URL)
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    maybeInjectFallbackSignIn(mainWindow)
+  })
+  mainWindow.webContents.on('did-navigate-in-page', () => {
+    maybeInjectFallbackSignIn(mainWindow)
+  })
+
   mainWindow.on('closed', () => {
     teardownLoginView()
     mainWindow = null
@@ -77,6 +84,57 @@ function createMainWindow() {
   mainWindow.on('resize', () => {
     layoutLoginViews()
   })
+}
+
+/**
+ * If the loaded app build predates WebViewLogin.tsx, inject a floating CTA
+ * that uses preload IPC + fetch('/api/user/login'). Harmless no-op when the
+ * React button (#open-webview-login) is already present.
+ */
+function maybeInjectFallbackSignIn(win) {
+  if (!win || win.isDestroyed()) return
+  const url = win.webContents.getURL() || ''
+  if (!/\/signin\b/i.test(url)) return
+  win.webContents
+    .executeJavaScript(
+      `(() => {
+        if (document.getElementById('open-webview-login')) return 'react';
+        if (document.getElementById('ehv-electron-fallback-login')) return 'fallback';
+        if (!window.electronAPI || !window.electronAPI.openLoginWebView) return 'no-api';
+        const bar = document.createElement('div');
+        bar.id = 'ehv-electron-fallback-login';
+        bar.style.cssText = 'position:fixed;z-index:99999;left:12px;right:12px;bottom:12px;padding:12px 16px;border-radius:10px;background:#1b5e20;color:#fff;display:flex;gap:12px;align-items:center;justify-content:space-between;font:14px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4)';
+        bar.innerHTML = '<span>Electron: sign in with in-app WebView (cookies captured automatically)</span>';
+        const btn = document.createElement('button');
+        btn.textContent = 'Sign in with WebView';
+        btn.style.cssText = 'appearance:none;border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;background:#fff;color:#1b5e20';
+        btn.onclick = async () => {
+          btn.disabled = true;
+          try { await window.electronAPI.openLoginWebView(); } catch (e) { btn.disabled = false; alert(String(e && e.message || e)); }
+        };
+        bar.appendChild(btn);
+        document.body.appendChild(bar);
+        if (!window.__ehvFallbackCookieHook) {
+          window.__ehvFallbackCookieHook = true;
+          window.electronAPI.onLoginCookies(async (cookies) => {
+            try {
+              const res = await fetch('/api/user/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-EHV-CSRF': '1' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ method: 'cookie', ...cookies }),
+              });
+              const data = await res.json();
+              if (data && !data.error) { location.href = '/'; }
+              else { alert((data && data.message) || 'Login failed'); btn.disabled = false; }
+            } catch (e) { alert(String(e && e.message || e)); btn.disabled = false; }
+          });
+        }
+        return 'injected';
+      })()`,
+      true
+    )
+    .catch(() => {})
 }
 
 function loginSession() {
