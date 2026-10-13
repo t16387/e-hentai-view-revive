@@ -68,6 +68,8 @@ Compose auto-reads `.env` for `${VAR}` substitution and passes selected vars int
 | `PORT` | Optional (local only) | `3000` / `3001` | **Bare Node / `start.bat` / `dev.bat`:** Node listen port (browser URL). Compose **always** sets container `PORT=8080` — do not use `PORT` for Docker host mapping. | Local bats default **`3000`**; container **`8080`** |
 | `EHV_PROXY` | Optional | `http://host.docker.internal:7890` | HTTP(S) proxy for **server → site** requests | Empty: direct connection. (axios may still honour system `HTTP_PROXY` / `HTTPS_PROXY` if set elsewhere.) |
 | `EHV_USER_AGENT` | Optional | *(leave unset)* | Override User-Agent on upstream fetches | Built-in browser-like Chrome UA |
+| `EHV_DOWNLOADS_HOST` | Optional (Compose) | `./downloads` / `.` | **Host** folder bind-mounted to the container download dir. Relative paths are under the **compose project directory**. | **`./downloads`** |
+| `EHV_DOWNLOADS_DIR` | Optional (bare Node) | `./data/downloads` | Server download storage path. **Compose sets this to `/app/data/downloads` inside the container** — do not point it at a host path when using Compose. Alias: `EHV_DOWNLOAD_DIR`. | Bare Node: **`./data/downloads`**; Compose: **`/app/data/downloads`** |
 
 ### Vars set by Compose / the image (do not put secrets here)
 
@@ -76,6 +78,7 @@ Compose auto-reads `.env` for `${VAR}` substitution and passes selected vars int
 | `NODE_ENV` | Compose + Dockerfile | `production` | Next/server production mode | Image defaults to `production`; bare `start.bat` also sets it |
 | `PORT` | Compose + Dockerfile | `8080` | Listen port **inside** the container | App falls back to `8080` (or `EHV_HOST_PORT` if somehow unset). **Host/browser mapping is `EHV_HOST_PORT`, not this `PORT`.** |
 | `EHV_PROXY_TIMEOUT` | Optional (advanced) | `10000` | Timeout (ms) for image-proxy fetches to H@H nodes | **`10000`** |
+| `EHV_DOWNLOADS_DIR` | Compose (fixed) | `/app/data/downloads` | Where offline gallery images/zips live **inside** the container (mounted from `EHV_DOWNLOADS_HOST`) | Compose always sets this; bare Node uses cwd default |
 
 There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar in `.env`.
 
@@ -97,6 +100,26 @@ There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar i
 Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Dockerfiles, or git. A lab-only secrets file used for offline live-check scripts is unrelated to Compose and must stay off this repo.
 
 **Never bake cookies into the image.** `.dockerignore` excludes `.env*` (except `.env.example`) so a rebuild cannot copy local secrets into the build context.
+
+
+## Downloads volume (offline manga)
+
+Offline gallery downloads (images + zip) are stored under a **mountable** directory so they survive container recreation.
+
+| Side | Path | How to change |
+|------|------|----------------|
+| **Host** (default) | `./downloads` next to `docker-compose.yml` (compose project dir) | Set `EHV_DOWNLOADS_HOST` in `.env` (e.g. `.` for the project root, or an absolute path) |
+| **Container** | `/app/data/downloads` | Fixed by Compose via `EHV_DOWNLOADS_DIR` |
+
+```yaml
+# from docker-compose.yml
+volumes:
+  - ${EHV_DOWNLOADS_HOST:-./downloads}:/app/data/downloads
+```
+
+- **Clear downloads** in Settings deletes gallery folders under that path (same `EHV_DOWNLOADS_DIR` the server uses).
+- Host content under `./downloads` (and bare-Node `./data`) is **gitignored** — do not commit manga files.
+- Bare Node (no Docker): set `EHV_DOWNLOADS_DIR` (or alias `EHV_DOWNLOAD_DIR`); default is `./data/downloads`.
 
 ## Security
 

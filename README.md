@@ -55,6 +55,8 @@ docker compose up -d
 
 Open **http://localhost:3000** (if port 3000 is taken, set `EHV_HOST_PORT=3001` in `.env` and open http://localhost:3001). Stop with `docker compose down`.
 
+Downloaded manga persist on the host under **`./downloads`** by default (compose project directory). Override with `EHV_DOWNLOADS_HOST` in `.env`. Details: [DOCKER.md § Downloads volume](DOCKER.md#downloads-volume-offline-manga).
+
 | Goal | What to do |
 |------|------------|
 | Everyday run | `docker load` then `docker compose up -d` |
@@ -72,6 +74,8 @@ Copy `.env.example` → `.env`. **Never commit `.env`.** Never put gallery cooki
 | `PORT` | Optional (local) | `3000` / `3001` | **Bare Node / bats:** Node listen port (what the browser hits). **Compose:** always `8080` inside the container (do not use for host mapping) | Local default **`3000`** (bats); container **`8080`** |
 | `EHV_PROXY` | Optional | `http://host.docker.internal:7890` | Proxy for server→site fetches | Direct (no proxy) |
 | `EHV_USER_AGENT` | Optional | *(unset)* | Override upstream User-Agent | Built-in browser-like UA |
+| `EHV_DOWNLOADS_HOST` | Optional (Compose) | `./downloads` | Host folder mounted to container downloads (compose project dir) | **`./downloads`** |
+| `EHV_DOWNLOADS_DIR` | Optional (bare Node) / set by Compose | `./data/downloads` / `/app/data/downloads` | Server download storage; Compose fixes container path. Alias: `EHV_DOWNLOAD_DIR` | See [DOCKER.md](DOCKER.md#downloads-volume-offline-manga) |
 | `NODE_ENV` | Set by Compose | `production` | Production mode | Image/Compose set it |
 
 **`EHV_SITE=e-hentai`** — public site, anonymous OK. **`EHV_SITE=exhentai`** — needs Sign In in the app UI; cookies stay in your browser (HttpOnly), not in `.env` or the image.
@@ -117,6 +121,7 @@ Branch **`revive`** modernizes the original EHentaiView app so it works against 
 | **UI themes** | Settings: **Classic**, **V3**, **V4** (category chips, filter rail / Filter Deck, pagers). Design notes: [UI-V3.md](UI-V3.md), `design-system/`. |
 | **Docker + env** | Compose stack, tagged image `ehentai-view:revive`, `.env.example` → `.env` (gitignored). Everyday Windows: **load tar + `docker compose up -d`** (no `--build`). Full steps: **[DOCKER.md](DOCKER.md)**. |
 | **Configurable port** | Docker: `EHV_HOST_PORT` (host → container `8080`). Local / bats: `PORT` (or `EHV_HOST_PORT` alias). Default browser port **3000**. |
+| **Offline downloads** | Gallery zip/images under `EHV_DOWNLOADS_DIR` (default `./data/downloads`). Compose mounts host `EHV_DOWNLOADS_HOST` (default `./downloads`) → `/app/data/downloads`. Clear-downloads uses the same path. |
 | **Windows bats** | `dev.bat` (Next + API) and `start.bat` (production after `pnpm build`). Default `EHV_SITE=e-hentai`. |
 
 There is no separate UAT checklist in-tree; use **DOCKER.md** for run/verify, **UI-V3.md** / `design-system/` for UI chrome, and `pnpm test` for unit coverage (parser/CSRF/proxy/list modes, etc.).

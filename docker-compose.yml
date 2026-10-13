@@ -11,6 +11,9 @@
 # Compose auto-reads `.env` for ${VAR} substitution. Cookies: sign in through
 # the app UI in your browser — never put gallery cookies in .env or the image.
 # Host/browser port = EHV_HOST_PORT (default 3000) → container PORT 8080.
+#
+# Downloads: host ${EHV_DOWNLOADS_HOST:-./downloads} → /app/data/downloads in the
+# container (EHV_DOWNLOADS_DIR). Clear-downloads / offline zips use that path.
 
 services:
   ehv:
@@ -27,6 +30,12 @@ services:
       EHV_SITE: ${EHV_SITE:-e-hentai}
       EHV_PROXY: ${EHV_PROXY:-}
       EHV_USER_AGENT: ${EHV_USER_AGENT:-}
+      # Fixed container path; host folder is bind-mounted below
+      EHV_DOWNLOADS_DIR: /app/data/downloads
+    volumes:
+      # Host path (default: ./downloads under the compose project dir) → container downloads
+      # Override with EHV_DOWNLOADS_HOST=. to use the project directory itself
+      - ${EHV_DOWNLOADS_HOST:-./downloads}:/app/data/downloads
     restart: unless-stopped
     healthcheck:
       test:

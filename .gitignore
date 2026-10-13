@@ -40,5 +40,7 @@ tsconfig.tsbuildinfo
 .env.*
 !.env.example
 
-# local gallery downloads (server-side)
+# local gallery downloads (server-side; bare Node default ./data/downloads)
 /data
+# Docker Compose default host mount (./downloads → container /app/data/downloads)
+/downloads

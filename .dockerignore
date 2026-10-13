@@ -12,3 +12,6 @@ coverage
 # secrets only — do not exclude server/src/utils/cookies.js
 **/ehv-exh.env
 **/.secrets
+# local download storage (never bake into the image)
+data
+downloads

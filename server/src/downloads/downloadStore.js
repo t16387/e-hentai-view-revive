@@ -5,9 +5,9 @@ const path = require('path')
 const DEFAULT_ROOT = path.join(process.cwd(), 'data', 'downloads')
 
 function downloadsRoot() {
-  return process.env.EHV_DOWNLOADS_DIR
-    ? path.resolve(process.env.EHV_DOWNLOADS_DIR)
-    : DEFAULT_ROOT
+  // EHV_DOWNLOADS_DIR preferred; EHV_DOWNLOAD_DIR accepted as alias
+  const raw = process.env.EHV_DOWNLOADS_DIR || process.env.EHV_DOWNLOAD_DIR
+  return raw ? path.resolve(raw) : DEFAULT_ROOT
 }
 
 /** gid_token id from validated gallery refs */
