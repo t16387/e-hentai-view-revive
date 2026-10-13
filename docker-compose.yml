@@ -8,8 +8,8 @@
 #   sudo docker save ehentai-view:revive | gzip > ehentai-view-revive.tar.gz
 # Then open http://localhost:3000 (or EHV_HOST_PORT from .env if 3000 is taken)
 #
-# Compose auto-reads `.env` for ${VAR} substitution. Cookies: sign in through
-# the app UI in your browser — never put gallery cookies in .env or the image.
+# Compose auto-reads `.env` for ${VAR} substitution. Auth: in-app Sign In
+# (username/password). Never put gallery cookies or passwords in .env or the image.
 # Host/browser port = EHV_HOST_PORT (default 3000) → container PORT 8080.
 #
 # Downloads: host ${EHV_DOWNLOADS_HOST:-./downloads} → /app/data/downloads in the

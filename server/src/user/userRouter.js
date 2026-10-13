@@ -1,5 +1,10 @@
 const express = require('express')
-const { login, validateLogin, getUserSetting } = require('./userApi')
+const {
+  login,
+  validateLogin,
+  getUserSetting,
+  attachIgneous,
+} = require('./userApi')
 const {
   getCookieString,
   upstreamCookieString,
@@ -54,10 +59,14 @@ router.post('/login', async (req, res) => {
       { ipb_member_id, ipb_pass_hash, igneous },
       siteName
     )
-    userCookie = { ipb_member_id, ipb_pass_hash, igneous }
+    userCookie = await attachIgneous({
+      ipb_member_id,
+      ipb_pass_hash,
+      igneous,
+    })
   } else {
-    // Password login against forums is usually blocked by Cloudflare;
-    // the UI no longer offers it. Kept for API compatibility.
+    // In-app username/password: server POSTs to forums and stores Set-Cookie
+    // as HttpOnly on this origin. May fail with Cloudflare on some egress IPs.
     const { message, cookie } = await login({ UserName, PassWord })
     content = message
     userCookie = cookie
@@ -147,8 +156,7 @@ router.post('/site', async (req, res) => {
       return res.json({
         error: true,
         code: 'no login',
-        message:
-          'Sign in first (Cookie Login) before switching to exhentai.org',
+        message: 'Sign in first before switching to exhentai.org',
       })
     }
     if (!c.igneous || c.igneous === 'mystery') {
@@ -156,7 +164,7 @@ router.post('/site', async (req, res) => {
         error: true,
         code: 'sad panda',
         message:
-          'exhentai needs a valid igneous cookie. Open exhentai.org in this browser after signing in on e-hentai, then Cookie Login again with igneous included.',
+          'exhentai needs a valid igneous cookie. Sign in again after the server can reach exhentai, or use Advanced cookie login and include igneous.',
       })
     }
   }

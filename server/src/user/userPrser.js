@@ -8,7 +8,7 @@ function parseLogin(html) {
   const re2 = /The captcha was not entered correctly\. Please try again\./
   if (re2.test(html)) {
     throw new Error(
-      'The captcha was not entered correctly. Please use cookie login'
+      'The forums login captcha was required. In-app password login cannot complete captchas in a browser app — use Advanced → cookie login.'
     )
   }
 
@@ -16,7 +16,7 @@ function parseLogin(html) {
     return `You are now logged in as: ${arr[1]}`
   }
   throw new Error(
-    'The account password may be wrong, please try again or use cookie login'
+    'The account password may be wrong, please try again or use Advanced → cookie login'
   )
 }
 

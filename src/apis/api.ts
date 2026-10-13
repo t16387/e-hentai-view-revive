@@ -26,6 +26,7 @@ axios.interceptors.response.use((res) => {
 export type UserPayload = {
   UserName?: string
   PassWord?: string
+  /** omit for username/password; set 'cookie' for advanced cookie paste */
   method?: 'cookie'
   ipb_member_id?: string
   ipb_pass_hash?: string

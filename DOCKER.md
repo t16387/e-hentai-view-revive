@@ -91,10 +91,10 @@ There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar i
 
 **Defaults:** Compose, app code, and Windows bats all default to **`e-hentai`**. Prefer **Settings → Gallery site** in the app to switch to ExHentai at runtime (sends `X-EHV-Site`); `EHV_SITE` is only the server fallback when the client sends no preference.
 
-### Cookies (ExHentai)
+### Auth / cookies (ExHentai)
 
-1. Open the app (default site is e-hentai) and use **Sign In**: open forums login → optionally open exhentai.org for `igneous` → paste cookies (Cookie Login). Email/password login is removed (Cloudflare).
-2. In **Settings → Gallery site**, switch to **exhentai.org** (requires login cookies + valid `igneous`).
+1. Open the app (default site is e-hentai) and use **Sign In**: enter your e-hentai forums username and password. The server logs in on your behalf and stores session cookies as HttpOnly on the app origin. Passwords are never saved. If Cloudflare or a captcha blocks password login, expand **Advanced** and paste cookies instead.
+2. In **Settings → Gallery site**, switch to **exhentai.org** (requires login cookies + valid `igneous`; password login tries to obtain `igneous` when possible).
 3. Session cookies stay in **your browser** (HttpOnly on the app origin). The Node server forwards them upstream; they are **never** written into the image, Compose file, or `.env`.
 
 Do **not** put `ipb_member_id` / `ipb_pass_hash` / `igneous` into `.env`, Dockerfiles, or git. A lab-only secrets file used for offline live-check scripts is unrelated to Compose and must stay off this repo.
@@ -127,7 +127,7 @@ volumes:
 |------|------|
 | `.env` | Gitignored (`.env`, `.env.*`). Holds machine-local Compose settings only. |
 | `.env.example` | Safe template committed to git — placeholders and comments only. |
-| Gallery cookies | Browser Sign-In UI only — never env, never Dockerfile `ENV`, never `docker commit` of a logged-in container. |
+| Gallery cookies / passwords | In-app Sign In only — never env, never Dockerfile `ENV`, never `docker commit` of a logged-in container. |
 | Image | Built from source + lockfile; runtime user `node`; no secrets in layers. |
 
 ## Compose (everyday) vs Windows bare Node

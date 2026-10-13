@@ -3,28 +3,28 @@ import message from '@/components/message'
 import { languageMap } from '@/constant'
 import { LanguageSlideUpDialog } from '@/widgets/setting/Language'
 import CookieLogin from '@/widgets/signin/CookieLogin'
+import Login from '@/widgets/signin/Login'
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Backdrop,
   Box,
   Button,
   CircularProgress,
   Container,
-  Link,
   Typography,
 } from '@mui/material'
 import makeStyles from '@mui/styles/makeStyles'
-import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import TranslateIcon from '@mui/icons-material/Translate'
 import { Alert } from '@mui/material'
 import { NextPage } from 'next'
-import { Trans, useTranslation } from 'next-i18next'
+import { useTranslation } from 'next-i18next'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { useRouter } from 'next/router'
 import React, { useEffect, useState } from 'react'
 import { cache } from 'swr'
-
-const FORUMS_LOGIN = 'https://forums.e-hentai.org/index.php?act=Login&CODE=00'
-const EXHENTAI_HOME = 'https://exhentai.org/'
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -36,13 +36,8 @@ const useStyles = makeStyles((theme) => ({
     zIndex: theme.zIndex.drawer + 1,
     color: '#fff',
   },
-  step: {
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(1),
-  },
-  openBtn: {
-    marginTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
+  advanced: {
+    marginTop: theme.spacing(3),
   },
 }))
 
@@ -63,8 +58,15 @@ const SignIn: NextPage = () => {
   const onSubmit = async (payload: UserPayload) => {
     try {
       setLoading(true)
-      payload.method = 'cookie'
-      let res = await login(payload)
+      const isCookie =
+        payload.method === 'cookie' ||
+        !!(payload.ipb_member_id && payload.ipb_pass_hash)
+      if (isCookie) {
+        payload.method = 'cookie'
+      } else {
+        delete payload.method
+      }
+      const res = await login(payload)
       setLoading(false)
       if (!res.error) {
         message.success(res.message)
@@ -72,15 +74,16 @@ const SignIn: NextPage = () => {
       } else {
         message.error(res.message)
       }
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false)
-    }
-  }
-
-  const openUrl = (url: string) => {
-    const w = window.open(url, '_blank', 'noopener,noreferrer')
-    if (!w) {
-      message.error(t('SignIn.PopupBlocked'))
+      const msg =
+        (error &&
+          error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        (error && error.message) ||
+        t('SignIn.LoginFailed')
+      message.error(msg)
     }
   }
 
@@ -105,58 +108,28 @@ const SignIn: NextPage = () => {
         </Typography>
 
         <Box m="16px 0">
-          <Alert severity="info">
-            <Trans i18nKey="SignIn.info">
-              Sign in on
-              <Link
-                href={FORUMS_LOGIN}
-                target="_blank"
-                rel="noopener noreferrer"
-                underline="hover"
-              >
-                {' e-hentai '}
-              </Link>
-              in this browser, then paste the cookies below so this app can use
-              them (HttpOnly on our origin). Email/password login is no longer
-              available.
-            </Trans>
-          </Alert>
+          <Alert severity="info">{t('SignIn.info')}</Alert>
         </Box>
 
-        <Typography variant="subtitle1" className={classes.step} gutterBottom>
-          {`1. ${t('SignIn.OpenForums')}`}
-        </Typography>
-        <Button
-          fullWidth
-          variant="outlined"
-          color="primary"
-          className={classes.openBtn}
-          endIcon={<OpenInNewIcon />}
-          onClick={() => openUrl(FORUMS_LOGIN)}
-        >
-          {t('SignIn.OpenForumsBtn')}
-        </Button>
+        <Login onSubmit={onSubmit} />
 
-        <Typography variant="subtitle1" className={classes.step} gutterBottom>
-          {`2. ${t('SignIn.OpenExhentai')}`}
-        </Typography>
-        <Typography variant="body2" color="textSecondary" gutterBottom>
-          {t('SignIn.OpenExhentaiHint')}
-        </Typography>
-        <Button
-          fullWidth
-          variant="outlined"
-          className={classes.openBtn}
-          endIcon={<OpenInNewIcon />}
-          onClick={() => openUrl(EXHENTAI_HOME)}
-        >
-          {t('SignIn.OpenExhentaiBtn')}
-        </Button>
-
-        <Typography variant="subtitle1" className={classes.step} gutterBottom>
-          {`3. ${t('SignIn.PasteCookies')}`}
-        </Typography>
-        <CookieLogin onSubmit={onSubmit} />
+        <Accordion elevation={0} className={classes.advanced}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="advanced-cookie-login"
+            id="advanced-cookie-login-header"
+          >
+            <Typography variant="body2" color="textSecondary">
+              {t('SignIn.AdvancedCookie')}
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails style={{ flexDirection: 'column', padding: 0 }}>
+            <Alert severity="warning" style={{ marginBottom: 8 }}>
+              {t('SignIn.AdvancedCookieHint')}
+            </Alert>
+            <CookieLogin onSubmit={onSubmit} />
+          </AccordionDetails>
+        </Accordion>
 
         <Backdrop open={loading} className={classes.backdrop}>
           <CircularProgress color="inherit" />
