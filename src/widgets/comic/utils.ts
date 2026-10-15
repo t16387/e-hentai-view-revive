@@ -1,6 +1,12 @@
 import { axios } from '@/apis'
 import { DetailThumbPage } from '@/interface/gallery'
 import { ComicSlot, DEFAULT_ASPECT, itemHeight } from './paging'
+import {
+  DEFAULT_VERTICAL_MAX_WIDTH,
+  verticalItemDims,
+  verticalReaderWidth,
+  VerticalSizeOpts,
+} from './verticalSize'
 
 export interface ComicListDataSourceProps {
   total: number
@@ -45,15 +51,25 @@ export async function getPageWithRetry(
   throw lastError
 }
 
-/** width the reader renders images at */
-export function readerWidth() {
+/**
+ * Width the reader renders images at.
+ * Pass vertical size opts in vertical mode; omit for the historical
+ * min(viewport, 1280) behaviour.
+ */
+export function readerWidth(opts?: VerticalSizeOpts) {
+  if (opts) return verticalReaderWidth(opts)
   return typeof window === 'undefined'
-    ? 1280
-    : Math.min(window.innerWidth, 1280)
+    ? DEFAULT_VERTICAL_MAX_WIDTH
+    : Math.min(window.innerWidth, DEFAULT_VERTICAL_MAX_WIDTH)
 }
 
 export function computedAspectratioHeight(
-  aspectratio: number = DEFAULT_ASPECT
+  aspectratio: number = DEFAULT_ASPECT,
+  opts?: VerticalSizeOpts & { maxHeightPx?: number }
 ) {
-  return itemHeight(aspectratio, readerWidth())
+  const width = readerWidth(opts)
+  if (opts && typeof opts.maxHeightPx === 'number') {
+    return verticalItemDims(aspectratio, width, opts.maxHeightPx).height
+  }
+  return itemHeight(aspectratio, width)
 }

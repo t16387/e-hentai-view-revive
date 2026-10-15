@@ -8,23 +8,24 @@ import React, { useEffect } from 'react'
 import { useTranslation } from 'next-i18next'
 import { Button } from '@mui/material'
 import { mutate } from 'swr'
-import { ComicListDataSourceProps, computedAspectratioHeight } from './utils'
+import { ComicListDataSourceProps } from './utils'
 import { ComicSlot, DEFAULT_ASPECT, pagesToLoad } from './paging'
+import { verticalItemDims } from './verticalSize'
 import ProxyImg from '@/components/ProxyImg'
 import Thumb from '@/components/Thumb'
 
 const useStyles = makeStyles<Theme, {}>((theme: Theme) =>
   createStyles({
     root: {
-      transition: theme.transitions.create('height'),
-      maxWidth: 1280,
+      transition: theme.transitions.create(['height', 'max-width']),
       margin: theme.spacing(0, 'auto'),
       width: '100%',
       userSelect: 'none',
       display: 'flex',
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    img: { width: '100%', display: 'block' },
+    img: { width: '100%', display: 'block', height: 'auto' },
     frame: { position: 'relative', width: '100%' },
     reload: {
       position: 'absolute',
@@ -51,8 +52,21 @@ const ComicItem: React.FC<{
   perPage?: number
   comicPagesKey: string
   noMinHeight?: boolean
-}> = ({ index, item, total, perPage, comicPagesKey, noMinHeight }) => {
-  const classes = useStyles()
+  /** vertical column width from ComicList (defaults kept for safety) */
+  columnWidth?: number
+  /** optional per-page max height in px (0 = unlimited) */
+  maxHeightPx?: number
+}> = ({
+  index,
+  item,
+  total,
+  perPage,
+  comicPagesKey,
+  noMinHeight,
+  columnWidth = 1280,
+  maxHeightPx = 0,
+}) => {
+  const classes = useStyles({})
   const url = item?.url
   const aspectratio = item?.aspectratio || DEFAULT_ASPECT
 
@@ -73,7 +87,8 @@ const ComicItem: React.FC<{
     )
   }, [index, perPage, total, loadMorePage$])
 
-  const minHeight = computedAspectratioHeight(aspectratio)
+  const dims = verticalItemDims(aspectratio, columnWidth, maxHeightPx)
+  const minHeight = dims.height
 
   // remember the real aspect ratio (natural size, not the rendered box)
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -94,20 +109,46 @@ const ComicItem: React.FC<{
     )
   }
 
+  const frameStyle: React.CSSProperties =
+    maxHeightPx > 0 && dims.width < columnWidth
+      ? {
+          width: dims.width,
+          maxHeight: dims.height,
+          marginLeft: 'auto',
+          marginRight: 'auto',
+        }
+      : maxHeightPx > 0
+      ? { maxHeight: dims.height }
+      : {}
+
+  const imgStyle: React.CSSProperties =
+    maxHeightPx > 0
+      ? {
+          maxHeight: dims.height,
+          width: '100%',
+          height: 'auto',
+          objectFit: 'contain',
+        }
+      : {}
+
   return (
     <div
-      style={{ minHeight: noMinHeight ? '' : minHeight }}
+      style={{
+        minHeight: noMinHeight ? undefined : minHeight,
+        maxWidth: columnWidth,
+      }}
       className={classes.root}
       data-index={index}
       // eslint-disable-next-line jsx-a11y/aria-role
       role="comic-item"
     >
-      <div className={classes.frame}>
+      <div className={classes.frame} style={frameStyle}>
         {loaded ? (
           <img
             src={image.src}
             alt={index.toString()}
             className={classes.img}
+            style={imgStyle}
             decoding="async"
             referrerPolicy="no-referrer"
             // a preloaded image that still fails (cache evicted, node gone)
@@ -115,12 +156,13 @@ const ComicItem: React.FC<{
             onLoad={handleLoad}
           />
         ) : item?.sprite ? (
-          <Thumb src={item.thumb} sprite={item.sprite} maxWidth={1280} />
+          <Thumb src={item.thumb} sprite={item.sprite} maxWidth={dims.width} />
         ) : item?.thumb ? (
           <ProxyImg
             src={item.thumb}
             alt={index.toString()}
             className={classes.img}
+            style={imgStyle}
           />
         ) : (
           <div className={classes.placeholder} style={{ minHeight }}>

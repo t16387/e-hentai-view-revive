@@ -11,13 +11,17 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import ComicControls from './ComicControls'
 import ComicItem from './ComicItem'
 import ComicStatus from './ComicStatus'
-import { indexAtScroll, prefixOffsets, visibleRange } from './paging'
-import { readerWidth } from './utils'
+import { indexAtScroll, visibleRange } from './paging'
+import {
+  verticalPrefixOffsets,
+  verticalReaderMaxHeight,
+  verticalReaderWidth,
+} from './verticalSize'
 
-const useStyles = makeStyles((theme: Theme) =>
+const useStyles = makeStyles<Theme, { maxWidth: number }>((theme: Theme) =>
   createStyles({
     root: {
-      maxWidth: 1280,
+      maxWidth: ({ maxWidth }) => maxWidth,
       backgroundColor: 'black',
       minHeight: '100vh',
       position: 'relative',
@@ -27,7 +31,7 @@ const useStyles = makeStyles((theme: Theme) =>
     virtualItem: {
       position: 'absolute',
       width: '100%',
-      maxWidth: 1280,
+      maxWidth: ({ maxWidth }) => maxWidth,
     },
   })
 )
@@ -36,9 +40,25 @@ const scroller = () => document.scrollingElement as HTMLElement
 
 const ComicList: React.FC<{ comicUrl: string }> = ({ comicUrl }) => {
   const comicPagesKey = `${comicUrl}/read`
-  const classes = useStyles()
-  const { data } = useComicData(comicUrl)
   const [config] = useComicConfigState()
+  const sizeOpts = useMemo(
+    () => ({
+      verticalMaxWidth: config.verticalMaxWidth,
+      verticalWidthPercent: config.verticalWidthPercent,
+      verticalMaxHeightVh: config.verticalMaxHeightVh,
+    }),
+    [
+      config.verticalMaxWidth,
+      config.verticalWidthPercent,
+      config.verticalMaxHeightVh,
+    ]
+  )
+  const columnWidth = verticalReaderWidth(sizeOpts)
+  const maxHeightPx = verticalReaderMaxHeight(sizeOpts)
+  // Column CSS max-width should match the effective layout width so % width
+  // shrinks the whole reader (not only the image inside a full-bleed column).
+  const classes = useStyles({ maxWidth: columnWidth })
+  const { data } = useComicData(comicUrl)
   // must come after useComicData: its page-request emits need the
   // subscription that useComicData sets up
   useReaderImageQueue(comicPagesKey, data, {
@@ -46,8 +66,8 @@ const ComicList: React.FC<{ comicUrl: string }> = ({ comicUrl }) => {
   })
   const list = data?.list
   const offsets = useMemo(
-    () => prefixOffsets(list || [], readerWidth()),
-    [list]
+    () => verticalPrefixOffsets(list || [], columnWidth, maxHeightPx),
+    [list, columnWidth, maxHeightPx]
   )
   const offsetsRef = useRef(offsets)
   offsetsRef.current = offsets
@@ -66,7 +86,7 @@ const ComicList: React.FC<{ comicUrl: string }> = ({ comicUrl }) => {
   }, [])
 
   // keep the current image in place when items above it change height
-  // (thumbnail pages arriving, images reporting their real size)
+  // (thumbnail pages arriving, images reporting their real size, size prefs)
   useLayoutEffect(() => {
     const a = anchor.current
     if (!a) return
@@ -120,6 +140,8 @@ const ComicList: React.FC<{ comicUrl: string }> = ({ comicUrl }) => {
           total={data.total}
           perPage={data.perPage}
           comicPagesKey={comicPagesKey}
+          columnWidth={columnWidth}
+          maxHeightPx={maxHeightPx}
         />
       </div>
     )
@@ -133,6 +155,7 @@ const ComicList: React.FC<{ comicUrl: string }> = ({ comicUrl }) => {
         style={{
           minHeight: offsets[offsets.length - 1],
           position: 'relative',
+          width: '100%',
         }}
       >
         {items}
