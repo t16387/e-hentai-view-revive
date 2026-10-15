@@ -38,7 +38,7 @@ docker run -d -p 80:8080 --restart always ironkinoko/e-hentai-view
 
 ## Docker 與環境變數（revive）
 
-本 **revive** 分支提供 Compose 堆疊與標籤映像 `ehentai-view:revive`。在 Windows 上日常用法是 **載入預建 tar + `docker compose up -d`**（不需本機 Node，也不要加 `--build`）。完整步驟、Windows 檢查清單與映像細節見 **[DOCKER.md](../../DOCKER.md)**。
+本 **revive** 分支提供 Compose 堆疊與標籤映像 `ehentai-view:revive`。在 **Windows／macOS／Linux** 上日常用法是 **載入預建 tar + `docker compose up -d`**（不需本機 Node，也不要加 `--build`）。同一區網的手機／平板也可開啟。完整步驟、各 OS 檢查清單、防火牆與區網存取見 **[DOCKER.md](../../DOCKER.md)**。
 
 ### 使用 Docker Compose 執行
 
@@ -50,16 +50,21 @@ docker load -i ehentai-view-revive.tar.gz   # tag: ehentai-view:revive
 cp .env.example .env
 
 # 3) 啟動 — 筆記型電腦上請勿加 --build
-docker compose up -d
+./start.sh                 # macOS / Linux
+# docker-up.bat            # Windows
+# docker compose up -d     # 任何 OS
 ```
 
-開啟 **http://localhost:3000**（若 3000 被占用，在 `.env` 設 `EHV_HOST_PORT=3001` 並開啟 http://localhost:3001）。停止：`docker compose down`。
+開啟 **http://localhost:3000**（若 3000 被占用，在 `.env` 設 `EHV_HOST_PORT=3001` 並開啟 http://localhost:3001）。停止：`./stop.sh`、`docker-down.bat` 或 `docker compose down`。
+
+**從 iPhone／Android（同一 Wi‑Fi）：** `http://<主機區網IP>:3000` — Windows 用 `ipconfig`、macOS 用 `ipconfig getifaddr en0`、Linux 用 `hostname -I`。請在主機防火牆放行該埠。詳見 [DOCKER.md § LAN / mobile access](../../DOCKER.md#lan--mobile-access)。
 
 | 目標 | 作法 |
 |------|------|
-| 日常執行 | `docker load` 後 `docker compose up -d` |
-| 程式變更後要新映像 | 實驗機：`docker compose build` → `docker save … \| gzip` → 傳 tar → Windows 上 `docker load` |
-| 只改站點／代理／埠號 | 編輯 `.env`，再 `docker compose up -d`（不必重建） |
+| 日常執行（Win/Mac/Linux） | `docker load` 後 `./start.sh`／`docker-up.bat`／`docker compose up -d` |
+| 程式變更後要新映像 | 實驗機：`docker compose build` → `docker save … \| gzip` → 傳 tar → 筆記型電腦 `docker load` |
+| 只改站點／代理／埠號 | 編輯 `.env`，再重啟 Compose（不必重建） |
+| 手機／平板區網存取 | 開啟 `http://<區網IP>:<EHV_HOST_PORT>`（見 DOCKER.md） |
 
 ### 環境變數
 
@@ -76,7 +81,7 @@ docker compose up -d
 
 **`EHV_SITE=e-hentai`** — 公開站，可匿名。**`EHV_SITE=exhentai`** — 需在應用 UI 登入；Cookie 留在瀏覽器（HttpOnly），不進 `.env` 或映像。
 
-### Compose 與 Windows 裸跑 Node
+### Compose 與裸跑 Node
 
 
 | | Docker Compose | `start.bat` / 本機 pnpm |
@@ -85,7 +90,7 @@ docker compose up -d
 | 設定 | `.env`（`EHV_HOST_PORT` 對應瀏覽器埠） | `.env`／環境變數（`PORT`，或 `EHV_HOST_PORT` 別名）；bat 預設 `PORT=3000` |
 | 預設站點 | `e-hentai` | `e-hentai`（可在設定切換） |
 | 瀏覽器網址 | http://localhost:**`EHV_HOST_PORT`**（→ 容器 8080） | http://localhost:**`PORT`**（預設 3000） |
-| 適合 | 筆記型電腦、共用實驗室映像 | 本機開發 |
+| 適合 | 各 OS 筆記型電腦、區網手機、共用實驗室映像 | 本機開發 |
 
 **當 3000 被占用時改埠**
 
@@ -116,9 +121,9 @@ docker compose up -d
 | **安全性／驗證** | **應用內登入**：輸入 e-hentai 帳號／密碼（設定 `EHV_FLARESOLVERR_URL` 時經 **FlareSolverr** 代向論壇登入，以 **HttpOnly + SameSite=Lax** Cookie 存於本站；密碼不儲存）。若 solver／驗證碼阻擋，可用**進階**手動貼 Cookie。密鑰不存 `localStorage` 或映像。CSRF 檢查、僅路徑日誌、留言 HTML 淨化（保留圖庫連結）、依使用者快取鍵、關閉開放代理路徑。 |
 | **圖庫站點** | 應用內 **設定 → 圖庫站點**：**e-hentai**／**exhentai**。預設 **`e-hentai`**（可匿名）。ExHentai 需登入；Cookie 留在瀏覽器，永不進 `.env` 或映像。 |
 | **UI 主題** | 設定：**經典**、**V3**、**V4**（分類晶片、篩選欄／Filter Deck、分頁器）。設計說明：[UI-V3.md](../../UI-V3.md)、`design-system/`。 |
-| **Docker + 環境** | Compose 堆疊、標籤映像 `ehentai-view:revive`、`.env.example` → `.env`（gitignore）。Windows 日常：**載入 tar + `docker compose up -d`**（不加 `--build`）。完整步驟：**[DOCKER.md](../../DOCKER.md)**。 |
+| **Docker + 環境** | Compose 堆疊、標籤映像 `ehentai-view:revive`、`.env.example` → `.env`（gitignore）。**Win/Mac/Linux** 日常：**載入 tar + Compose**（不加 `--build`）。區網手機見 DOCKER.md。完整步驟：**[DOCKER.md](../../DOCKER.md)**。 |
 | **可設定埠號** | Docker：`EHV_HOST_PORT`（主機 → 容器 `8080`）。本機／bat：`PORT`（或 `EHV_HOST_PORT` 別名）。預設瀏覽器埠 **3000**。 |
-| **Windows bat** | `dev.bat`（Next + API）與 `start.bat`（`pnpm build` 後正式環境）。預設 `EHV_SITE=e-hentai`。 |
+| **各 OS 腳本** | Compose：`start.sh`／`stop.sh`（Mac/Linux）、`docker-up.bat`／`docker-down.bat`（Windows）。裸跑 Node：`dev.bat`／`start.bat`。預設 `EHV_SITE=e-hentai`。 |
 
 樹內無獨立 UAT 清單；執行／驗證見 **DOCKER.md**，UI 外觀見 **UI-V3.md**／`design-system/`，單元測試見 `pnpm test`（解析／CSRF／代理／列表模式等）。
 
@@ -145,7 +150,7 @@ pnpm run dev:app
 # 或在 Windows：dev.bat
 ```
 
-本機正式環境：`pnpm build`，再執行 `start.bat`（Windows）或 `node server`／`pnpm start`。瀏覽 http://localhost:3000（或 `PORT`／`EHV_HOST_PORT`）。
+本機正式環境：`pnpm build`，再執行 `start.bat`（Windows）或 `node server`／`pnpm start`。若不需本機 Node，優先用 Docker Compose（`./start.sh`／`docker-up.bat`）。瀏覽 http://localhost:3000（或 `PORT`／`EHV_HOST_PORT`）；手機請用主機區網 IP（見 DOCKER.md）。
 
 Docker Compose 請見 **[Docker 與環境變數（revive）](#docker-與環境變數revive)** 與 [DOCKER.md](../../DOCKER.md)。
 

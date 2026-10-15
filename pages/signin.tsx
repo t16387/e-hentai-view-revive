@@ -2,6 +2,7 @@ import { login, UserPayload } from '@/apis'
 import message from '@/components/message'
 import { languageMap } from '@/constant'
 import { LanguageSlideUpDialog } from '@/widgets/setting/Language'
+import LanAccessHint from '@/components/LanAccessHint'
 import CookieLogin from '@/widgets/signin/CookieLogin'
 import Login from '@/widgets/signin/Login'
 import {
@@ -28,9 +29,15 @@ import { cache } from 'swr'
 
 const useStyles = makeStyles((theme) => ({
   paper: {
-    marginTop: theme.spacing(8),
+    marginTop: theme.spacing(2),
+    [theme.breakpoints.up('sm')]: {
+      marginTop: theme.spacing(8),
+    },
     display: 'flex',
     flexDirection: 'column',
+    // avoid horizontal overflow on narrow phones
+    maxWidth: '100%',
+    overflowX: 'hidden',
   },
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
@@ -110,6 +117,7 @@ const SignIn: NextPage = () => {
           {t('SignIn')}
         </Typography>
 
+        <LanAccessHint />
         <Box m="16px 0">
           <Alert severity="info">{t('SignIn.info')}</Alert>
         </Box>

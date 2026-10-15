@@ -1,10 +1,22 @@
 # Docker & environment (revive)
 
-You do **not** need Node or pnpm on the notebook. Prefer a **pre-built image** (`docker load` from tar) so Windows never runs `docker compose build`.
+You do **not** need Node or pnpm on the host. Prefer a **pre-built image** (`docker load` from tar) so everyday machines never run `docker compose build`.
+
+Works the same on **Windows**, **macOS**, and **Linux** (Linux containers via Docker Desktop or Engine). Phones/tablets on the same LAN can open the app in Safari/Chrome — see [LAN / mobile access](#lan--mobile-access).
 
 For a short overview in the main docs, see [README.md § Docker & environment](README.md#docker--environment-revive).
 
-## Quick start (pre-built image — recommended on Windows)
+## Install Docker (once)
+
+| OS | What to install | Notes |
+|----|-----------------|-------|
+| **Windows 10/11** | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Use the **Linux engine** (WSL2 backend recommended). Keep Desktop running while you use Compose. |
+| **macOS** | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Apple Silicon and Intel both work. Keep Desktop running. |
+| **Linux** | [Docker Engine](https://docs.docker.com/engine/install/) + Compose plugin | Or Docker Desktop for Linux. Your user needs permission to talk to the daemon (`docker` group or `sudo`). |
+
+Confirm: `docker version` and `docker compose version`.
+
+## Quick start (pre-built image — recommended)
 
 1. Put `ehentai-view-revive.tar.gz` next to this project (or extract `ehv-source-latest.zip`, which includes Compose files).
 2. Load the image:
@@ -29,9 +41,19 @@ docker compose up -d
 
 Open **http://localhost:3000** (or the port in `EHV_HOST_PORT`). If **3000 is already in use**, set `EHV_HOST_PORT=3001` in `.env` and open http://localhost:3001.
 
-Stop: `docker compose down`.
+Stop: `docker compose down` (or `./stop.sh` / `docker-down.bat`).
 
-`docker-compose.yml` sets `image: ehentai-view:revive`, which must match the loaded tag. Do **not** pass `--build` on the notebook unless you intentionally want a local rebuild.
+Helper scripts (same Compose stack; **no** `--build`):
+
+| OS | Start | Stop |
+|----|-------|------|
+| **macOS / Linux** | `./start.sh` | `./stop.sh` |
+| **Windows** | `docker-up.bat` | `docker-down.bat` |
+| Any | `docker compose up -d` | `docker compose down` |
+
+`docker-compose.yml` sets `image: ehentai-view:revive`, which must match the loaded tag. Do **not** pass `--build` on notebooks unless you intentionally want a local rebuild.
+
+Port publish binds **`0.0.0.0:${EHV_HOST_PORT}:8080`** so other devices on your LAN can connect (not localhost-only).
 
 ## Alternative: build on a lab/server only
 
@@ -49,9 +71,9 @@ Transfer the tar to Windows and follow **Quick start** above.
 
 | Mode | When | Command | Needs Node/pnpm on host? |
 |------|------|---------|--------------------------|
-| **Load image** (everyday) | Windows notebook, sharing a lab build | `docker load …` then `docker compose up -d` | No |
+| **Load image** (everyday) | Win/Mac/Linux notebook, sharing a lab build | `docker load …` then `docker compose up -d` / `./start.sh` | No |
 | **Build image** (lab/CI) | You changed the Dockerfile or app and need a new tar | `docker compose build` then `docker save …` | No (build runs inside Docker) |
-| **Bare Node** | Local develop / no Docker | `pnpm install` + `pnpm build` + `start.bat` / `pnpm start` | Yes |
+| **Bare Node** | Local develop / no Docker | `pnpm install` + `pnpm build` + `start.bat` / `./start.sh` is Compose-only — use `pnpm start` / `node server` | Yes |
 
 Production Compose always sets `NODE_ENV=production` and listens on **8080 inside the container**. Rebuilding the image is only needed after source or Dockerfile changes — not for changing `.env` values (restart Compose after editing `.env`).
 
@@ -135,16 +157,16 @@ volumes:
 | Gallery cookies / passwords | In-app Sign In only — never env, never Dockerfile `ENV`, never `docker commit` of a logged-in container. |
 | Image | Built from source + lockfile; runtime user `node`; no secrets in layers. |
 
-## Compose (everyday) vs Windows bare Node
+## Compose (everyday) vs bare Node
 
-| | **Docker Compose** | **`start.bat` / local pnpm** |
+| | **Docker Compose** | **`start.bat` / local pnpm** (any OS) |
 |--|--------------------|------------------------------|
 | Needs | Docker Desktop (or Engine) + loaded/built image | Node ≥20, pnpm, `pnpm install` + `pnpm build` |
 | Config | `.env` from `.env.example` | `.env` / shell env; bats read `PORT` / `EHV_HOST_PORT` (default listen **3000**) |
 | Default site | `e-hentai` (Compose) | `e-hentai` (`start.bat` / `dev.bat`; switch in Settings) |
 | Browser URL | http://localhost:**`EHV_HOST_PORT`** (→ container 8080) | http://localhost:**`PORT`** (default 3000; `EHV_HOST_PORT` aliases if `PORT` unset) |
 | Prod vs rebuild | Change `.env` → restart container. Change code → rebuild image on lab, reload tar on Windows. | Change code → `pnpm build` again, then `start.bat`. |
-| Best for | Notebooks, “just run it”, sharing one lab image | Active development without Docker |
+| Best for | Any OS notebook, “just run it”, sharing one lab image, **LAN phones** | Active development without Docker |
 
 ### Changing the port (3000 already in use)
 
@@ -164,15 +186,86 @@ Compose keeps the process on **8080 inside the container**; only the host publis
 
 Double-click from the project root (or run from `cmd`). Prefer Docker load+compose when you do not want a local Node toolchain.
 
-## Windows (Docker Desktop) checklist
+## OS checklists
 
-1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and ensure it is running (Linux engine).
-2. Obtain `ehentai-view-revive.tar.gz` (lab build) and the project folder / `ehv-source-latest.zip`.
+### Windows (Docker Desktop)
+
+1. Install Docker Desktop; ensure it is running (Linux engine / WSL2).
+2. Obtain `ehentai-view-revive.tar.gz` (lab build) and this project folder.
 3. `docker load -i ehentai-view-revive.tar.gz` — confirm tag `ehentai-view:revive`.
-4. `copy .env.example .env` then `docker compose up -d` (**no** `--build`).
-5. Browse to `http://localhost:3000` (or `EHV_HOST_PORT` from `.env` if you changed it).
+4. `copy .env.example .env` then `docker-up.bat` or `docker compose up -d` (**no** `--build`).
+5. Browse to `http://localhost:3000` (or `EHV_HOST_PORT` from `.env`).
 
-If upstream is blocked on your network, set `EHV_PROXY` to your local proxy. On Docker Desktop, `host.docker.internal` reaches the host (e.g. `http://host.docker.internal:7890`).
+### macOS (Docker Desktop)
+
+1. Install Docker Desktop; ensure it is running.
+2. Load the image: `gunzip -c ehentai-view-revive.tar.gz | docker load` (or `docker load -i …`).
+3. `cp .env.example .env` then `./start.sh` or `docker compose up -d` (**no** `--build`).
+4. Open `http://localhost:3000` (or `EHV_HOST_PORT`).
+
+### Linux (Docker Engine)
+
+1. Install Docker Engine + Compose plugin; start the daemon.
+2. Load the image (same as macOS) or build on this machine if it is your lab box.
+3. `cp .env.example .env` then `./start.sh` or `docker compose up -d`.
+4. Open `http://localhost:3000` (or `EHV_HOST_PORT`).
+
+If upstream is blocked on your network, set `EHV_PROXY` to your local proxy. On Docker Desktop (Win/Mac), `host.docker.internal` reaches the host (e.g. `http://host.docker.internal:7890`). On Linux Engine, Compose already adds `host.docker.internal:host-gateway`.
+
+## LAN / mobile access
+
+Compose publishes the app on **all interfaces** (`0.0.0.0`), so phones and tablets on the **same Wi‑Fi / LAN** can use it.
+
+### Open from iPhone / Android
+
+1. On the host PC/Mac, note `EHV_HOST_PORT` (default **3000**).
+2. Find the host’s LAN IP:
+
+| OS | How |
+|----|-----|
+| **Windows** | `ipconfig` → **IPv4 Address** under your Wi‑Fi or Ethernet adapter (e.g. `192.168.1.42`) |
+| **macOS** | `ipconfig getifaddr en0` (Wi‑Fi) or System Settings → Network |
+| **Linux** | `hostname -I` or `ip -4 addr` |
+
+3. On the phone/tablet browser (Safari / Chrome), open:
+
+```text
+http://<host-LAN-IP>:<port>
+```
+
+Example: `http://192.168.1.42:3000`
+
+4. Keep the host awake and Docker running. Guest Wi‑Fi / client isolation blocks this — use the normal LAN.
+
+### Firewall
+
+Allow inbound TCP on `EHV_HOST_PORT` (default 3000) from your local network:
+
+| OS | Typical action |
+|----|----------------|
+| **Windows** | Windows Security → Firewall → allow Docker Desktop / create an inbound rule for TCP 3000 (Private networks). First browser hit from another device may prompt “Allow access”. |
+| **macOS** | System Settings → Network → Firewall: allow **Docker** / **com.docker.backend** when prompted, or add the port. |
+| **Linux** | `sudo ufw allow 3000/tcp` (or your `EHV_HOST_PORT`), then `sudo ufw reload`. Firewalld: open the port in your active zone. |
+
+Do **not** port-forward this to the public internet unless you know the risks (no built-in HTTPS or auth gate beyond your e-hentai session cookies).
+
+### Cookies / Sign In on phone vs desktop
+
+| Client | How to authenticate |
+|--------|---------------------|
+| **Desktop browser** (Chrome/Edge/Firefox on the host or LAN PC) | **Browser login**: open forums, solve Turnstile, paste cookie dump (DevTools → Application → Cookies). |
+| **iOS Safari / Android Chrome** on phone | Same app UI: open **Sign In** → paste cookies into **Browser login** / Advanced fields. Get the cookie values from a desktop browser (or any cookie export), then paste on the phone. Password + FlareSolverr may work if the solver clears Turnstile. |
+| **Chrome extension** (planned) | **Desktop only** — will not run on iOS. Do not expect an extension on iPhone/iPad. Tracked as a desktop follow-up; not required for LAN browsing. |
+
+Session cookies are stored as **HttpOnly on the app origin** (whatever host:port you opened, e.g. `http://192.168.1.42:3000`). Sign in **on that device/browser** once; they are never written to `.env` or the image. Signing in on `localhost` does **not** share cookies with the LAN IP — use the LAN URL on the phone and paste cookies there.
+
+### Optional UI hint
+
+When you open the app via a non-localhost Host (LAN IP), Sign In may show a short LAN URL tip (after an image rebuild that includes that UI). Docs above are enough without it.
+
+## Chrome extension (desktop follow-up)
+
+A browser extension to help copy e-hentai cookies into this app is a **future desktop** convenience. It is **not** available on iOS/Android. Until then, use in-app cookie paste (or password + FlareSolverr).
 
 ## Image details
 

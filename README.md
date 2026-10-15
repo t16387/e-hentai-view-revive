@@ -38,7 +38,7 @@ see more detail https://hub.docker.com/r/ironkinoko/e-hentai-view
 
 ## Docker & environment (revive)
 
-This **revive** branch ships a Compose stack and a tagged image `ehentai-view:revive`. Everyday use on Windows is **load a pre-built tar + `docker compose up -d`** (no local Node, no `--build`). Full steps, Windows checklist, and image details: **[DOCKER.md](DOCKER.md)**.
+This **revive** branch ships a Compose stack and a tagged image `ehentai-view:revive`. Everyday use on **Windows, macOS, or Linux** is **load a pre-built tar + `docker compose up -d`** (no local Node, no `--build`). Phones/tablets on the same LAN can open the app too. Full steps, OS checklists, firewall, and LAN access: **[DOCKER.md](DOCKER.md)**.
 
 ### Run with Docker Compose
 
@@ -50,18 +50,23 @@ docker load -i ehentai-view-revive.tar.gz   # tag: ehentai-view:revive
 cp .env.example .env
 
 # 3) Start — do NOT pass --build on the notebook
-docker compose up -d
+./start.sh                 # macOS / Linux
+# docker-up.bat            # Windows
+# docker compose up -d     # any OS
 ```
 
-Open **http://localhost:3000** (if port 3000 is taken, set `EHV_HOST_PORT=3001` in `.env` and open http://localhost:3001). Stop with `docker compose down`.
+Open **http://localhost:3000** (if port 3000 is taken, set `EHV_HOST_PORT=3001` in `.env` and open http://localhost:3001). Stop with `./stop.sh`, `docker-down.bat`, or `docker compose down`.
+
+**From iPhone / Android (same Wi‑Fi):** `http://<host-LAN-IP>:3000` — find the IP with `ipconfig` (Windows), `ipconfig getifaddr en0` (macOS), or `hostname -I` (Linux). Allow the port in the host firewall. Details: [DOCKER.md § LAN / mobile access](DOCKER.md#lan--mobile-access).
 
 Downloaded manga persist on the host under **`./downloads`** by default (compose project directory). Override with `EHV_DOWNLOADS_HOST` in `.env`. Details: [DOCKER.md § Downloads volume](DOCKER.md#downloads-volume-offline-manga).
 
 | Goal | What to do |
 |------|------------|
-| Everyday run | `docker load` then `docker compose up -d` |
-| New image after code change | On lab: `docker compose build` → `docker save … \| gzip` → transfer tar → `docker load` on Windows |
-| Only change site/proxy/port | Edit `.env`, then `docker compose up -d` (no rebuild) |
+| Everyday run (Win/Mac/Linux) | `docker load` then `./start.sh` / `docker-up.bat` / `docker compose up -d` |
+| New image after code change | On lab: `docker compose build` → `docker save … \| gzip` → transfer tar → `docker load` on the notebook |
+| Only change site/proxy/port | Edit `.env`, then restart Compose (no rebuild) |
+| Phone / tablet on LAN | Open `http://<LAN-IP>:<EHV_HOST_PORT>` (see DOCKER.md) |
 
 ### Environment variables
 
@@ -80,7 +85,7 @@ Copy `.env.example` → `.env`. **Never commit `.env`.** Never put gallery cooki
 
 **`EHV_SITE=e-hentai`** — public site, anonymous OK. **`EHV_SITE=exhentai`** — needs Sign In in the app UI; cookies stay in your browser (HttpOnly), not in `.env` or the image.
 
-### Compose vs Windows bare Node
+### Compose vs bare Node
 
 | | Docker Compose | `start.bat` / local pnpm |
 |--|----------------|--------------------------|
@@ -88,7 +93,7 @@ Copy `.env.example` → `.env`. **Never commit `.env`.** Never put gallery cooki
 | Config | `.env` (`EHV_HOST_PORT` for browser port) | `.env` / env (`PORT`, or `EHV_HOST_PORT` alias); bats default `PORT=3000` |
 | Default site | `e-hentai` | `e-hentai` (switch in Settings) |
 | Browser URL | http://localhost:**`EHV_HOST_PORT`** (→ container 8080) | http://localhost:**`PORT`** (default 3000) |
-| Best for | Notebooks, shared lab image | Local development |
+| Best for | Any OS + LAN phones, shared lab image | Local development |
 
 **Change port when 3000 is in use**
 
@@ -119,10 +124,10 @@ Branch **`revive`** modernizes the original EHentaiView app so it works against 
 | **Security / auth** | **Browser login** (recommended): open forums in a new tab, solve Cloudflare Turnstile yourself, paste cookie dump (`ipb_member_id` / `ipb_pass_hash` / optional `igneous`) — closest web equivalent to EhViewer/JHenTai WebView login (localhost cannot read cross-origin cookies). Optional username/password via **FlareSolverr** (often blocked by interactive Turnstile). Session cookies stored as **HttpOnly + SameSite=Lax**; never in `localStorage`. CSRF checks, path-only logs, comment HTML sanitizer, per-user cache keys. See `/workspace/ehv-analysis/login-peer-research.md` (analysis) / DOCKER.md. |
 | **Gallery site** | In-app **Settings → Gallery site**: **e-hentai** / **exhentai**. Default **`e-hentai`** (anonymous OK). ExHentai needs Sign In; cookies stay in the browser, never in `.env` or the image. |
 | **UI themes** | Settings: **Classic**, **V3**, **V4** (category chips, filter rail / Filter Deck, pagers). Design notes: [UI-V3.md](UI-V3.md), `design-system/`. |
-| **Docker + env** | Compose stack, tagged image `ehentai-view:revive`, `.env.example` → `.env` (gitignored). Everyday Windows: **load tar + `docker compose up -d`** (no `--build`). Full steps: **[DOCKER.md](DOCKER.md)**. |
+| **Docker + env** | Compose stack, tagged image `ehentai-view:revive`, `.env.example` → `.env` (gitignored). Everyday **Win/Mac/Linux**: **load tar + Compose** (no `--build`). LAN phones: see DOCKER.md. Full steps: **[DOCKER.md](DOCKER.md)**. |
 | **Configurable port** | Docker: `EHV_HOST_PORT` (host → container `8080`). Local / bats: `PORT` (or `EHV_HOST_PORT` alias). Default browser port **3000**. |
 | **Offline downloads** | Gallery zip/images under `EHV_DOWNLOADS_DIR` (default `./data/downloads`). Compose mounts host `EHV_DOWNLOADS_HOST` (default `./downloads`) → `/app/data/downloads`. Clear-downloads uses the same path. |
-| **Windows bats** | `dev.bat` (Next + API) and `start.bat` (production after `pnpm build`). Default `EHV_SITE=e-hentai`. |
+| **OS scripts** | Compose: `start.sh` / `stop.sh` (Mac/Linux), `docker-up.bat` / `docker-down.bat` (Windows). Bare Node: `dev.bat` / `start.bat`. Default `EHV_SITE=e-hentai`. |
 
 There is no separate UAT checklist in-tree; use **DOCKER.md** for run/verify, **UI-V3.md** / `design-system/` for UI chrome, and `pnpm test` for unit coverage (parser/CSRF/proxy/list modes, etc.).
 
@@ -149,7 +154,7 @@ pnpm run dev:app
 # Or on Windows: dev.bat
 ```
 
-Production locally: `pnpm build`, then `start.bat` (Windows) or `node server` / `pnpm start`. Browse http://localhost:3000 (or `PORT` / `EHV_HOST_PORT`).
+Production locally: `pnpm build`, then `start.bat` (Windows) or `node server` / `pnpm start`. Prefer Docker Compose (`./start.sh` / `docker-up.bat`) when you do not want a local Node toolchain. Browse http://localhost:3000 (or `PORT` / `EHV_HOST_PORT`); phones use the host LAN IP (DOCKER.md).
 
 For Docker Compose, see **[Docker & environment (revive)](#docker--environment-revive)** and [DOCKER.md](DOCKER.md).
 
