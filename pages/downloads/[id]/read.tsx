@@ -63,6 +63,8 @@ const OfflineRead = () => {
     }
   }, [id, t])
 
+  const queryCurrent = router.query.current
+
   // Seed the shared reader store with every local image slot
   useEffect(() => {
     if (!item || !comicPagesKey || !router.isReady) return
@@ -80,7 +82,7 @@ const OfflineRead = () => {
       aspectratio: DEFAULT_ASPECT,
     }))
     const start = resolveStartIndex({
-      query: router.query.current,
+      query: queryCurrent,
       history: history[comicPagesKey],
       total,
     })
@@ -94,7 +96,7 @@ const OfflineRead = () => {
     if (!cache.has(comicPagesKey)) cache.set(comicPagesKey, next)
     mutate(comicPagesKey, next, false)
     setSeeded(true)
-  }, [item, comicPagesKey, router.isReady, router.query.current, history, t])
+  }, [item, comicPagesKey, router.isReady, queryCurrent, history, t])
 
   useEffect(() => {
     if (!comicPagesKey) return
