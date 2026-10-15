@@ -4,9 +4,14 @@ import {
   GalleryListMode,
   LIST_JUMP_MAX_WALK,
   SearchFilters,
+  clearJumpingOnCancel,
+  clampListJumpTarget,
   galleryListKey,
+  mergeListPagerQuery,
+  readListPagerQuery,
   resolveListEstimatedPages,
 } from '@/utils/search'
+import { useRouter } from 'next/router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSWRInfinite } from 'swr'
 
@@ -19,12 +24,25 @@ export interface UseGalleryListOptions extends SearchFilters {
 
 export default function useGalleryList(options: UseGalleryListOptions) {
   const { mode, ...filters } = options
-  const [viewPage, setViewPage] = useState(0)
+  const router = useRouter()
+  const initialPager = router.isReady
+    ? readListPagerQuery(
+        router.query as Record<string, string | string[] | undefined>
+      )
+    : { viewPage: 0, knownLastIndex: null as number | null }
+  const [viewPage, setViewPage] = useState(initialPager.viewPage)
   const [jumping, setJumping] = useState(false)
   const [jumpError, setJumpError] = useState<string | null>(null)
   /** When the cursor chain ends before EH's approximate total, clamp UI. */
-  const [knownLastIndex, setKnownLastIndex] = useState<number | null>(null)
+  const [knownLastIndex, setKnownLastIndex] = useState<number | null>(
+    initialPager.knownLastIndex
+  )
   const jumpGen = useRef(0)
+  /** After remount/back, walk cursors up to this 0-based index once data exists. */
+  const pendingRestore = useRef<number | null>(
+    initialPager.viewPage > 0 ? initialPager.viewPage : null
+  )
+  const skipUrlSync = useRef(false)
 
   const { data, error, size, setSize } = useSWRInfinite<GalleriesPage>(
     (pageIndex, previous: GalleriesPage | null) =>
@@ -38,13 +56,53 @@ export default function useGalleryList(options: UseGalleryListOptions) {
   )
 
   const filterIdentity = galleryListKey(mode, filters, 0, null) || mode
+
+  // Reset / restore when filters change or list remounts (gallery → Back).
   useEffect(() => {
-    setViewPage(0)
+    if (!router.isReady) return
     setJumpError(null)
-    setKnownLastIndex(null)
-    jumpGen.current++
+    clearJumpingOnCancel(jumpGen, setJumping)
+
+    const { viewPage: restoredPage, knownLastIndex: restoredLast } =
+      readListPagerQuery(router.query)
+
+    skipUrlSync.current = true
+    if (restoredPage > 0 || restoredLast != null) {
+      setViewPage(restoredPage)
+      setKnownLastIndex(restoredLast)
+      pendingRestore.current = restoredPage > 0 ? restoredPage : null
+    } else {
+      setViewPage(0)
+      setKnownLastIndex(null)
+      pendingRestore.current = null
+    }
     setSize(1)
-  }, [filterIdentity, setSize])
+  }, [filterIdentity, setSize, router.isReady])
+
+  // Persist pager position in the URL so Back from a gallery remounts at N/N.
+  useEffect(() => {
+    if (!router.isReady) return
+    if (skipUrlSync.current) {
+      skipUrlSync.current = false
+      return
+    }
+    const merged = mergeListPagerQuery(
+      router.query as Record<string, string | string[] | undefined>,
+      viewPage,
+      knownLastIndex
+    )
+    const cur = readListPagerQuery(
+      router.query as Record<string, string | string[] | undefined>
+    )
+    if (cur.viewPage === viewPage && cur.knownLastIndex === knownLastIndex) {
+      return
+    }
+    router.replace(
+      { pathname: router.pathname, query: merged as typeof router.query },
+      undefined,
+      { shallow: true }
+    )
+  }, [viewPage, knownLastIndex, router.isReady, router.pathname])
 
   const pageCountLoaded = data?.length ?? 0
   const current = data?.[viewPage]
@@ -205,11 +263,9 @@ export default function useGalleryList(options: UseGalleryListOptions) {
         return
       }
       let target = Math.floor(page1Based) - 1
-      // Clamp to discovered end when we already know the chain is shorter.
-      if (knownLastIndex != null && target > knownLastIndex) {
-        target = knownLastIndex
-        setJumpError('end')
-      }
+      const clamped = clampListJumpTarget(target, knownLastIndex)
+      target = clamped.target
+      if (clamped.clamped) setJumpError('end')
       // Site totals are "about N"; do not hard-clamp jumps to approxPages
       // until the cursor chain proves a shorter end.
       if (target < pageCountLoaded) {
@@ -267,6 +323,9 @@ export default function useGalleryList(options: UseGalleryListOptions) {
               setViewPage(skipped.index)
               return
             }
+            // Cancelled mid-skip: abort so finally can clear when gen matches,
+            // or leave jumping for a newer jump / cancelJumpingOnCancel.
+            if (jumpGen.current !== gen) return
             continue
           }
           if ((justFetched.list?.length ?? 0) === 0 && !justFetched.next) {
@@ -282,8 +341,10 @@ export default function useGalleryList(options: UseGalleryListOptions) {
           const at = pages?.[target]
           if (at && (at.list?.length ?? 0) === 0 && at.next) {
             const skipped = await skipEmptyForward(pages!, target, gen)
-            setViewPage(skipped.index)
-            if (skipped.ended) setJumpError('end')
+            if (jumpGen.current === gen) {
+              setViewPage(skipped.index)
+              if (skipped.ended) setJumpError('end')
+            }
           } else {
             setViewPage(target)
           }
@@ -302,6 +363,20 @@ export default function useGalleryList(options: UseGalleryListOptions) {
       skipEmptyForward,
     ]
   )
+
+  // After Back/restore: load cursor pages until the restored index has data.
+  useEffect(() => {
+    const target = pendingRestore.current
+    if (target == null) return
+    if (isLoadingInitialData || jumping) return
+    if (!data?.length) return
+    pendingRestore.current = null
+    if (target < pageCountLoaded) {
+      setViewPage(target)
+      return
+    }
+    void goToPage(target + 1)
+  }, [data, isLoadingInitialData, jumping, pageCountLoaded, goToPage])
 
   return {
     dataSource,

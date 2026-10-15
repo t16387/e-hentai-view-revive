@@ -438,3 +438,91 @@ export function galleryListKey(
   const query = encodeSearchQuery(params)
   return query ? `${endpoint}?${query}` : endpoint
 }
+
+/** Query keys for list pager position (1-based). Not sent upstream. */
+export const LIST_PAGE_QUERY = 'page'
+export const LIST_LAST_QUERY = 'last'
+
+export interface ListPagerQuery {
+  /** 0-based view index; 0 when absent / invalid */
+  viewPage: number
+  /** 0-based known last index, or null when unknown */
+  knownLastIndex: number | null
+}
+
+/**
+ * Read list pager position from Next router.query (already decoded).
+ * `page` / `last` are 1-based UI values; ignored by readSearchFilters.
+ */
+export function readListPagerQuery(
+  query: Record<string, string | string[] | undefined>
+): ListPagerQuery {
+  const pageRaw = readQueryString(query[LIST_PAGE_QUERY])
+  const lastRaw = readQueryString(query[LIST_LAST_QUERY])
+  let viewPage = 0
+  if (pageRaw) {
+    const n = Number(pageRaw)
+    if (Number.isInteger(n) && n >= 1) viewPage = n - 1
+  }
+  let knownLastIndex: number | null = null
+  if (lastRaw) {
+    const n = Number(lastRaw)
+    if (Number.isInteger(n) && n >= 1) knownLastIndex = n - 1
+  }
+  if (knownLastIndex != null && viewPage > knownLastIndex) {
+    viewPage = knownLastIndex
+  }
+  return { viewPage, knownLastIndex }
+}
+
+/**
+ * Merge pager state into a router query object. Omits page when 0 and
+ * last when unknown so filter-only URLs stay clean. Leaves other keys
+ * (f_search, f_cats, …) untouched.
+ */
+export function mergeListPagerQuery(
+  query: Record<string, string | string[] | undefined>,
+  viewPage: number,
+  knownLastIndex: number | null
+): Record<string, string | string[] | undefined> {
+  const next: Record<string, string | string[] | undefined> = { ...query }
+  if (viewPage <= 0) delete next[LIST_PAGE_QUERY]
+  else next[LIST_PAGE_QUERY] = String(Math.floor(viewPage) + 1)
+  if (knownLastIndex == null || knownLastIndex < 0) {
+    delete next[LIST_LAST_QUERY]
+  } else {
+    next[LIST_LAST_QUERY] = String(Math.floor(knownLastIndex) + 1)
+  }
+  return next
+}
+
+/**
+ * Clamp a 0-based jump target when the cursor chain end is already known.
+ * Returns the (possibly clamped) target and whether it was reduced.
+ */
+export function clampListJumpTarget(
+  target0: number,
+  knownLastIndex: number | null
+): { target: number; clamped: boolean } {
+  if (!Number.isFinite(target0) || target0 < 0) {
+    return { target: 0, clamped: target0 !== 0 }
+  }
+  const t = Math.floor(target0)
+  if (knownLastIndex != null && t > knownLastIndex) {
+    return { target: knownLastIndex, clamped: true }
+  }
+  return { target: t, clamped: false }
+}
+
+/**
+ * After a mid-jump cancel (filter change / gen bump), jumping must clear
+ * so Prev/Next/Go are usable. Call whenever bumping jumpGen outside a
+ * new jump start that immediately setJumping(true).
+ */
+export function clearJumpingOnCancel(
+  jumpGen: { current: number },
+  setJumping: (v: boolean) => void
+) {
+  jumpGen.current++
+  setJumping(false)
+}

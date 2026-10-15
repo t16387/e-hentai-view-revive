@@ -8,6 +8,8 @@ import {
   resolveListEstimatedPages,
   buildSearchParams,
   catsToHideMask,
+  clearJumpingOnCancel,
+  clampListJumpTarget,
   composeSearchQuery,
   estimateListPageCount,
   extractAiFilter,
@@ -15,7 +17,9 @@ import {
   filtersKey,
   galleryListKey,
   hideMaskToIncluded,
+  mergeListPagerQuery,
   parseGalleryUrl,
+  readListPagerQuery,
   readQueryString,
   readSearchFilters,
   searchHref,
@@ -318,6 +322,94 @@ describe('list page estimates (cursor UX)', () => {
         total: 900,
         rawPageSize: 25,
         pageCountLoaded: 20,
+        lastHasNext: true,
+        knownLastIndex: 12,
+      })
+    ).toBe(13)
+  })
+})
+
+describe('list pager URL restore', () => {
+  it('reads page/last as 0-based state and clamps page to last', () => {
+    expect(readListPagerQuery({})).toEqual({
+      viewPage: 0,
+      knownLastIndex: null,
+    })
+    expect(
+      readListPagerQuery({ page: '13', last: '13', f_search: 'q' })
+    ).toEqual({ viewPage: 12, knownLastIndex: 12 })
+    expect(readListPagerQuery({ page: '25', last: '13' })).toEqual({
+      viewPage: 12,
+      knownLastIndex: 12,
+    })
+    expect(readListPagerQuery({ page: '0' })).toEqual({
+      viewPage: 0,
+      knownLastIndex: null,
+    })
+    expect(readListPagerQuery({ page: 'abc', last: '-1' })).toEqual({
+      viewPage: 0,
+      knownLastIndex: null,
+    })
+  })
+
+  it('merges pager into query without wiping filters', () => {
+    const base = { f_search: 'female:"drugs$"', ai: 'exclude', language: 'chinese' }
+    expect(mergeListPagerQuery(base, 0, null)).toEqual(base)
+    expect(mergeListPagerQuery(base, 12, 12)).toEqual({
+      ...base,
+      page: '13',
+      last: '13',
+    })
+    expect(
+      mergeListPagerQuery({ ...base, page: '5', last: '9' }, 0, null)
+    ).toEqual(base)
+  })
+
+  it('readSearchFilters ignores page/last so filters survive restore', () => {
+    const f = readSearchFilters({
+      f_search: 'female:"drugs$"',
+      language: 'chinese',
+      ai: 'exclude',
+      page: '13',
+      last: '13',
+    })
+    expect(f.f_search).toBe('female:"drugs$"')
+    expect(f.language).toBe('chinese')
+    expect(f.ai).toBe('exclude')
+    expect((f as any).page).toBeUndefined()
+  })
+
+  it('clampListJumpTarget clamps beyond known last without a long walk', () => {
+    expect(clampListJumpTarget(24, 12)).toEqual({ target: 12, clamped: true })
+    expect(clampListJumpTarget(5, 12)).toEqual({ target: 5, clamped: false })
+    expect(clampListJumpTarget(24, null)).toEqual({ target: 24, clamped: false })
+    expect(clampListJumpTarget(-3, 12)).toEqual({ target: 0, clamped: true })
+  })
+
+  it('clearJumpingOnCancel bumps gen and always clears jumping', () => {
+    const jumpGen = { current: 3 }
+    let jumping = true
+    clearJumpingOnCancel(jumpGen, (v) => {
+      jumping = v
+    })
+    expect(jumpGen.current).toBe(4)
+    expect(jumping).toBe(false)
+    // Simulate finally: stale gen must not leave jumping stuck after cancel
+    const staleGen = 3
+    if (jumpGen.current === staleGen) jumping = false
+    else {
+      // cancel already cleared; a new jump would set true again
+      expect(jumping).toBe(false)
+    }
+  })
+
+  it('after restore, knownLastIndex keeps Y clamped (13 not 36)', () => {
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 900,
+        rawPageSize: 25,
+        pageCountLoaded: 1,
         lastHasNext: true,
         knownLastIndex: 12,
       })
