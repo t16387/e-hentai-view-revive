@@ -20,6 +20,11 @@ const defaultOpts: UseCommicDataOptions = {
 }
 const emptyStore: ComicListDataSourceProps = { current: 0, list: [], total: 0 }
 
+/** Downloads offline reader uses /downloads/:id as comicUrl (local images) */
+export function isOfflineComicUrl(comicUrl: string) {
+  return typeof comicUrl === 'string' && comicUrl.startsWith('/downloads/')
+}
+
 export default function useComicData(
   comicUrl: string,
   opts?: UseCommicDataOptions
@@ -40,6 +45,7 @@ export default function useComicData(
   // page 0: list skeleton (length = total), perPage
   useEffect(() => {
     if (!onlyInitData) return
+    if (isOfflineComicUrl(comicUrl)) return
     if (data && data.list.length > 0) return
     let cancelled = false
     getPageWithRetry(`/api/gallery${comicUrl}/0`)
@@ -65,6 +71,7 @@ export default function useComicData(
   // further thumbnail pages on demand (emitted by mounted ComicItems)
   useEffect(() => {
     if (onlyInitData) return noop
+    if (isOfflineComicUrl(comicUrl)) return noop
     return loadMorePage$.subscribe(async (pageIndex: number) => {
       if (loadedPages.current.has(pageIndex)) return
       loadedPages.current.add(pageIndex)

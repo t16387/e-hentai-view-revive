@@ -13,8 +13,22 @@ import Router from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 import useEventManager from './useEventListenerEnhance'
 
+/**
+ * Same-origin downloaded gallery images — already final URLs, no resolve
+ * step and no proxy (see OfflineRead /api/downloads/:id/images/:n).
+ */
+export function isLocalReaderImageUrl(url: string) {
+  return (
+    typeof url === 'string' &&
+    (url.startsWith('/api/downloads/') ||
+      url.startsWith('blob:') ||
+      url.startsWith('data:'))
+  )
+}
+
 /** H@H / thumbnail hosts that serve signed URLs without cookies */
 export function canLoadDirect(url: string) {
+  if (isLocalReaderImageUrl(url)) return true
   try {
     const u = new URL(url)
     return (
@@ -31,6 +45,10 @@ async function resolveImage(
   pageUrl: string,
   signal: AbortSignal
 ): Promise<ResolvedImage> {
+  // Offline / Downloads reader seeds slots with the final image path
+  if (isLocalReaderImageUrl(pageUrl)) {
+    return { url: pageUrl, retryKey: '' }
+  }
   const res = await fetch(
     '/api/gallery/loadImg?url=' + encodeURIComponent(pageUrl),
     { signal, credentials: 'same-origin' }

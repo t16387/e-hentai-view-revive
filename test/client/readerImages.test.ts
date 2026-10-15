@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('next/router', () => ({ default: { replace: vi.fn() } }))
-import { canLoadDirect, preloadImage } from '@/hooks/useReaderImages'
+import { canLoadDirect, isLocalReaderImageUrl, preloadImage } from '@/hooks/useReaderImages'
 
 describe('direct image loading allowlist (browser side)', () => {
   it.each([
@@ -17,6 +17,15 @@ describe('direct image loading allowlist (browser side)', () => {
     ['not a url', false],
   ])('%s -> %s', (url, ok) => {
     expect(canLoadDirect(url)).toBe(ok)
+  })
+})
+
+
+describe('local / Downloads reader image URLs', () => {
+  it('treats same-origin download paths as direct', () => {
+    expect(isLocalReaderImageUrl('/api/downloads/abc/images/0')).toBe(true)
+    expect(canLoadDirect('/api/downloads/abc/images/0')).toBe(true)
+    expect(isLocalReaderImageUrl('https://ehgt.org/x.webp')).toBe(false)
   })
 })
 
