@@ -77,6 +77,8 @@ export default function useGalleryList(options: UseGalleryListOptions) {
       pendingRestore.current = null
     }
     setSize(1)
+    // Intentionally omit router.query: only re-read on filter/remount, not every shallow page= write.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterIdentity, setSize, router.isReady])
 
   // Persist pager position in the URL so Back from a gallery remounts at N/N.
@@ -102,6 +104,8 @@ export default function useGalleryList(options: UseGalleryListOptions) {
       undefined,
       { shallow: true }
     )
+    // Intentionally omit full router: replace when pager state changes only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewPage, knownLastIndex, router.isReady, router.pathname])
 
   const pageCountLoaded = data?.length ?? 0
