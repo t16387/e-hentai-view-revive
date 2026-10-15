@@ -7,14 +7,60 @@ const { sanitizeCommentHtml } = require('../utils/sanitizeHtml')
 /**
  * Parse the "Found about 12,345 results." banner (div.searchtext).
  * The old `p.ip` element no longer exists. Returns null when absent or
- * not numeric ("Found hundreds of results").
+ * not numeric ("Found hundreds/thousands of results").
+ *
+ * Important: do NOT take digits from "Excluded N galleries…" — that used
+ * to turn "Found thousands… Excluded 5…" into total=5 and Page 3/1.
  * @param {Document} document
  * @returns {{ total: number|null, totalText: string }}
  */
 function parseSearchText(document) {
   const el = document.querySelector('.searchtext p, .searchtext, p.ip')
   const totalText = el ? el.textContent.replace(/\s+/g, ' ').trim() : ''
-  const m = totalText.match(/(\d[\d,]*)/)
+  if (!totalText) return { total: null, totalText: '' }
+
+  // Prefer explicit Found / Showing counts; ignore exclusion footnotes.
+  const foundExact = totalText.match(
+    /Found\s+(?:about\s+)?(\d[\d,]*)\+?\s+results?/i
+  )
+  if (foundExact) {
+    return {
+      total: parseInt(foundExact[1].replace(/,/g, ''), 10),
+      totalText,
+    }
+  }
+  const showingCount = totalText.match(/Showing\s+(\d[\d,]*)\s+results?/i)
+  if (showingCount) {
+    return {
+      total: parseInt(showingCount[1].replace(/,/g, ''), 10),
+      totalText,
+    }
+  }
+  // Legacy p.ip: "Showing 1 - 25 of 1,234"
+  const showingRange = totalText.match(
+    /Showing\s+\d[\d,]*\s*-\s*\d[\d,]*\s+of\s+(\d[\d,]*)/i
+  )
+  if (showingRange) {
+    return {
+      total: parseInt(showingRange[1].replace(/,/g, ''), 10),
+      totalText,
+    }
+  }
+  // Word magnitudes — not a numeric total (UI uses null → "Page N" only).
+  if (
+    /Found\s+(?:about\s+)?(hundreds|thousands|millions)\s+of\s+results/i.test(
+      totalText
+    )
+  ) {
+    return { total: null, totalText }
+  }
+
+  // Last resort: first number outside an Excluded clause.
+  const withoutExcluded = totalText
+    .replace(/Excluded\s+\d[\d,]*\s+galler(?:y|ies)[^.]*(?:\.|$)/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const m = withoutExcluded.match(/(\d[\d,]*)/)
   const total = m ? parseInt(m[1].replace(/,/g, ''), 10) : null
   return { total, totalText }
 }

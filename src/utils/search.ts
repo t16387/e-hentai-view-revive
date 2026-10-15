@@ -375,6 +375,10 @@ export const EH_LIST_PAGE_SIZE = 25
  * - Prefer a discovered end (cursor chain exhausted) over EH's approximate total.
  * - When estimating, use at least EH_LIST_PAGE_SIZE so partial first pages
  *   (Excluded N galleries…) do not inflate Y.
+ * - Never return Y < X (current page) or Y < pages already loaded — fixes
+ *   "Page 3 / 1" when total was misread from "Excluded N" or a stale last=.
+ * - When total is unknown (thousands/hundreds), return null so the UI shows
+ *   "Page N" without a fake tiny denominator.
  */
 export function resolveListEstimatedPages(opts: {
   mode: GalleryListMode
@@ -383,6 +387,8 @@ export function resolveListEstimatedPages(opts: {
   pageCountLoaded: number
   lastHasNext: boolean
   knownLastIndex: number | null
+  /** 1-based page currently shown; used as a floor for Y */
+  currentPage?: number
 }): number | null {
   const {
     mode,
@@ -391,21 +397,47 @@ export function resolveListEstimatedPages(opts: {
     pageCountLoaded,
     lastHasNext,
     knownLastIndex,
+    currentPage,
   } = opts
-  if (knownLastIndex != null) return knownLastIndex + 1
-  if (mode === 'popular') return 1
+  const page1 =
+    currentPage != null && currentPage > 0 ? Math.floor(currentPage) : 0
+  // Floor for bogus-total protection (not used to override a valid knownLast).
+  const loadedFloor = Math.max(pageCountLoaded, page1)
+
+  if (knownLastIndex != null) {
+    const knownY = knownLastIndex + 1
+    // Stale URL last=1 while user is on page 3 with more pages → ignore.
+    if (page1 > knownY && lastHasNext) {
+      // fall through to approx
+    } else {
+      return Math.max(knownY, page1)
+    }
+  }
+
+  if (mode === 'popular') return Math.max(1, page1)
+
   const pageSize =
     rawPageSize > 0 ? Math.max(rawPageSize, EH_LIST_PAGE_SIZE) : 0
   const approx = estimateListPageCount(total, pageSize)
+  let y: number | null
   if (
     pageCountLoaded > 0 &&
     !lastHasNext &&
     approx != null &&
     pageCountLoaded < approx
   ) {
-    return pageCountLoaded
+    y = pageCountLoaded
+  } else {
+    y = approx
   }
-  return approx
+
+  if (loadedFloor <= 0) return y
+  // Never show Page X / Y with X > Y (Excluded-digit total, etc.).
+  if (y == null || y < loadedFloor) {
+    if (lastHasNext) return null
+    return loadedFloor
+  }
+  return y
 }
 
 /**

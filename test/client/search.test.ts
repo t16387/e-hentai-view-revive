@@ -416,3 +416,62 @@ describe('list pager URL restore', () => {
     ).toBe(13)
   })
 })
+
+describe('list pager Y never below X', () => {
+  it('does not use Excluded-sized totals as Y while more pages are loaded', () => {
+    // total=5 from a bad parse; 3 pages loaded with next still available
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 5,
+        rawPageSize: 20,
+        pageCountLoaded: 3,
+        lastHasNext: true,
+        knownLastIndex: null,
+        currentPage: 3,
+      })
+    ).toBeNull()
+  })
+
+  it('floors Y to current page when chain ended with a tiny bogus total', () => {
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 5,
+        rawPageSize: 20,
+        pageCountLoaded: 3,
+        lastHasNext: false,
+        knownLastIndex: null,
+        currentPage: 3,
+      })
+    ).toBe(3)
+  })
+
+  it('ignores stale knownLastIndex smaller than the current page', () => {
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 900,
+        rawPageSize: 25,
+        pageCountLoaded: 3,
+        lastHasNext: true,
+        knownLastIndex: 0,
+        currentPage: 3,
+      })
+    ).toBe(36)
+  })
+
+  it('unknown thousands total → null Y (Page N only), not 1', () => {
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 0,
+        rawPageSize: 20,
+        pageCountLoaded: 3,
+        lastHasNext: true,
+        knownLastIndex: null,
+        currentPage: 3,
+      })
+    ).toBeNull()
+  })
+})

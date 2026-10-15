@@ -126,7 +126,20 @@ export default function useGalleryList(options: UseGalleryListOptions) {
     pageCountLoaded,
     lastHasNext: !!lastLoaded?.next,
     knownLastIndex,
+    currentPage: viewPage + 1,
   })
+
+  // Drop stale knownLast from URL when we have clearly loaded past it.
+  useEffect(() => {
+    if (knownLastIndex == null) return
+    if (pageCountLoaded > knownLastIndex + 1) {
+      setKnownLastIndex(null)
+      return
+    }
+    if (viewPage > knownLastIndex && !!lastLoaded?.next) {
+      setKnownLastIndex(null)
+    }
+  }, [knownLastIndex, pageCountLoaded, viewPage, lastLoaded?.next])
 
   const hasPrev = viewPage > 0
   const hasNext =

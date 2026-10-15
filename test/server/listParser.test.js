@@ -115,7 +115,17 @@ describe('parseSearchText / parseCursors helpers', () => {
     ['<div class="searchtext"><p>Found 1 result.</p></div>', 1],
     ['<div class="searchtext"><p>Found about 50,000+ results.</p></div>', 50000],
     ['<div class="searchtext"><p>Found thousands of results.</p></div>', null],
-    ['<p class="ip">Showing 1 - 25 of 1,234</p>', 1],
+    [
+      '<div class="searchtext"><p>Found thousands of results.</p><p>Excluded 5 galleries from this page.</p></div>',
+      null,
+    ],
+    [
+      '<div class="searchtext"><p>Found hundreds of results. Excluded 5 galleries from this page.</p></div>',
+      null,
+    ],
+    ['<div class="searchtext"><p>Found about 900 results.</p><p>Excluded 25 galleries from this page.</p></div>', 900],
+    ['<div class="searchtext"><p>Showing 15 results</p></div>', 15],
+    ['<p class="ip">Showing 1 - 25 of 1,234</p>', 1234],
     ['', null],
   ])('%s -> %s', (body, total) => {
     expect(parseSearchText(html(body)).total).toBe(total)
