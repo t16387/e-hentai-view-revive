@@ -365,6 +365,50 @@ export function estimateListPageCount(total: number, pageSize: number) {
 export const LIST_JUMP_MAX_WALK = 50
 
 /**
+ * Nominal EH list page size. Exclusion filters shrink the visible row count
+ * on a page; using the shrunken length inflates estimateListPageCount.
+ */
+export const EH_LIST_PAGE_SIZE = 25
+
+/**
+ * Resolve the pager's "Page X / Y" denominator.
+ * - Prefer a discovered end (cursor chain exhausted) over EH's approximate total.
+ * - When estimating, use at least EH_LIST_PAGE_SIZE so partial first pages
+ *   (Excluded N galleries…) do not inflate Y.
+ */
+export function resolveListEstimatedPages(opts: {
+  mode: GalleryListMode
+  total: number
+  rawPageSize: number
+  pageCountLoaded: number
+  lastHasNext: boolean
+  knownLastIndex: number | null
+}): number | null {
+  const {
+    mode,
+    total,
+    rawPageSize,
+    pageCountLoaded,
+    lastHasNext,
+    knownLastIndex,
+  } = opts
+  if (knownLastIndex != null) return knownLastIndex + 1
+  if (mode === 'popular') return 1
+  const pageSize =
+    rawPageSize > 0 ? Math.max(rawPageSize, EH_LIST_PAGE_SIZE) : 0
+  const approx = estimateListPageCount(total, pageSize)
+  if (
+    pageCountLoaded > 0 &&
+    !lastHasNext &&
+    approx != null &&
+    pageCountLoaded < approx
+  ) {
+    return pageCountLoaded
+  }
+  return approx
+}
+
+/**
  * SWR-infinite key for cursor pagination. The site ignores `page=N`; each
  * page links to the next one with `next=<gid>` (favorites `<gid>-<ts>`).
  * Returns null when there is no further page.

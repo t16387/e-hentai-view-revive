@@ -126,3 +126,22 @@ describe('parseSearchText / parseCursors helpers', () => {
     expect(parseCursors(d)).toEqual({ next: '1000001-1700000000', prev: '1000009-1700000099' })
   })
 })
+
+describe('filtered empty list page (exclusions)', () => {
+  const { listFromDocument } = require('../../server/src/gallery/listPage')
+  it('preserves next/prev when every gallery on the page was excluded', () => {
+    const res = listFromDocument(doc('list-filtered-empty-next.html'), GalleryMode.FrontPage)
+    expect(res.list).toEqual([])
+    expect(res.next).toBe('5000001')
+    expect(res.prev).toBe('5000026')
+    expect(res.total).toBe(900)
+    expect(res.totalText).toMatch(/900/)
+  })
+
+  it('true no-hits stays terminal with null cursors', () => {
+    const res = listFromDocument(doc('list-nohits.html'), GalleryMode.FrontPage)
+    expect(res.list).toEqual([])
+    expect(res.next).toBeNull()
+    expect(res.prev).toBeNull()
+  })
+})

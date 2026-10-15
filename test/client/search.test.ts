@@ -5,6 +5,7 @@ import {
   CAT,
   CAT_ALL,
   LIST_JUMP_MAX_WALK,
+  resolveListEstimatedPages,
   buildSearchParams,
   catsToHideMask,
   composeSearchQuery,
@@ -273,5 +274,53 @@ describe('list page estimates (cursor UX)', () => {
   })
   it('caps forward jump walks', () => {
     expect(LIST_JUMP_MAX_WALK).toBe(50)
+  })
+
+  it('clamps Y when cursor chain ends before EH approximate total', () => {
+    // 900/25 ≈ 36, but chain ended after 13 pages
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 900,
+        rawPageSize: 25,
+        pageCountLoaded: 13,
+        lastHasNext: false,
+        knownLastIndex: null,
+      })
+    ).toBe(13)
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 900,
+        rawPageSize: 25,
+        pageCountLoaded: 13,
+        lastHasNext: true,
+        knownLastIndex: null,
+      })
+    ).toBe(36)
+  })
+  it('does not inflate Y when first page is partial from exclusions', () => {
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 900,
+        rawPageSize: 21, // 4 excluded on page 1
+        pageCountLoaded: 1,
+        lastHasNext: true,
+        knownLastIndex: null,
+      })
+    ).toBe(36)
+  })
+  it('knownLastIndex wins over approximate total', () => {
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 900,
+        rawPageSize: 25,
+        pageCountLoaded: 20,
+        lastHasNext: true,
+        knownLastIndex: 12,
+      })
+    ).toBe(13)
   })
 })

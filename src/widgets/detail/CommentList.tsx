@@ -21,7 +21,7 @@ import clsx from 'clsx'
 import dayjs from 'dayjs'
 import { useTranslation } from 'next-i18next'
 import { useRouter } from 'next/router'
-import React, { forwardRef, useEffect } from 'react'
+import React, { forwardRef, useCallback } from 'react'
 import { parseGalleryUrl } from '@/utils/search'
 import { sanitizeCommentHtml } from '@/utils/sanitizeCommentHtml'
 
@@ -39,31 +39,44 @@ export interface CommentListProps {
   commentList: commentListItemProps[]
   hidden?: boolean
 }
+
+/**
+ * Intercept e-hentai / exhentai gallery links in comment HTML and navigate
+ * in-app. Event delegation survives dangerouslySetInnerHTML re-renders
+ * (unlike one-shot a.onclick in useEffect).
+ */
+function useGalleryLinkClick() {
+  const router = useRouter()
+  return useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      const a = target?.closest?.('a') as HTMLAnchorElement | null
+      if (!a || !a.href) return
+      const gallery = parseGalleryUrl(a.href)
+      if (!gallery) return
+      e.preventDefault()
+      e.stopPropagation()
+      // Drop showPage=comments (or other overlays) so the SPA does not stay
+      // on a stuck dialog / broken router state for the new gallery.
+      void router.push(
+        {
+          pathname: '/[gid]/[token]',
+          query: { gid: gallery.gid, token: gallery.token },
+        },
+        `/${gallery.gid}/${gallery.token}`
+      )
+    },
+    [router]
+  )
+}
+
 const CommentListContent = forwardRef<HTMLUListElement, CommentListProps>(
   ({ commentList, hidden }, ref) => {
     const classes = useStyles()
     const [t] = useTranslation()
-    const router = useRouter()
-    useEffect(() => {
-      if (typeof window !== 'undefined') {
-        // 监听链接，跳转到自己的详情页
-        document
-          .querySelectorAll<HTMLAnchorElement>(
-            '.commnets-list a[href*="hentai.org/g/"]'
-          )
-          .forEach((a) => {
-            // both e-hentai.org and exhentai.org gallery links (EHV_SITE)
-            const target = parseGalleryUrl(a.href)
-            if (!target) return
-            a.onclick = (e) => {
-              e.preventDefault()
-              router.push('/[gid]/[token]', `/${target.gid}/${target.token}`)
-            }
-          })
-      }
-    }, [])
+    const onLinkClick = useGalleryLinkClick()
     return (
-      <List ref={ref} className="commnets-list">
+      <List ref={ref} className="commnets-list" onClick={onLinkClick}>
         {commentList.length === 0 ? (
           <Typography
             gutterBottom

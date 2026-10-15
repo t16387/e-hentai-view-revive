@@ -185,5 +185,8 @@
   "SignIn.BrowserLoginHint": "Same idea as EhViewer/JHenTai WebView login: you solve Turnstile in a real browser tab. Then paste cookies here — localhost cannot read forums cookies automatically (no WebView CookieManager).",
   "SignIn.PasswordFallback": "Try username / password (FlareSolverr)",
   "SignIn.PasswordFallbackHint": "Server posts to forums via FlareSolverr when configured. Often blocked by interactive Turnstile — use Browser login instead.",
-  "SignIn.LanAccessHint": "Opened from the network ({{url}}). Sign in on this device — cookies from localhost are not shared. On phones, paste cookies here (Chrome extension is desktop-only)."
+  "SignIn.LanAccessHint": "Opened from the network ({{url}}). Sign in on this device — cookies from localhost are not shared. On phones, paste cookies here (Chrome extension is desktop-only).",
+  "Error": "Error",
+  "Retry": "Retry",
+  "G.LoadFailed": "Failed to load this gallery."
 }

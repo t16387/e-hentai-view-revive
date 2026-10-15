@@ -157,6 +157,18 @@ describe('listFromDocument', () => {
     )
   })
 
+
+  it('filtered-empty page keeps next cursor (do not treat as terminal)', () => {
+    const res = listFromDocument(
+      doc('list-filtered-empty-next.html'),
+      GalleryMode.FrontPage
+    )
+    expect(res.list).toEqual([])
+    expect(res.next).toBe('5000001')
+    expect(res.prev).toBe('5000026')
+    expect(res.total).toBe(900)
+  })
+
   it('exhentai thumbnail mode (profile without tags, unrated gallery)', () => {
     const res = listFromDocument(
       doc('list-thumbnail-exh.html'),

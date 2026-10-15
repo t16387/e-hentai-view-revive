@@ -185,5 +185,8 @@
   "SignIn.BrowserLoginHint": "Same idea as EhViewer/JHenTai WebView login: you solve Turnstile in a real browser tab. Then paste cookies here — localhost cannot read forums cookies automatically (no WebView CookieManager).",
   "SignIn.PasswordFallback": "Try username / password (FlareSolverr)",
   "SignIn.PasswordFallbackHint": "Server posts to forums via FlareSolverr when configured. Often blocked by interactive Turnstile — use Browser login instead.",
-  "SignIn.LanAccessHint": "当前从局域网打开（{{url}}）。请在此设备登录 — localhost 的 Cookie 不会共享。手机请粘贴 Cookie（Chrome 扩展仅桌面可用）。"
+  "SignIn.LanAccessHint": "当前从局域网打开（{{url}}）。请在此设备登录 — localhost 的 Cookie 不会共享。手机请粘贴 Cookie（Chrome 扩展仅桌面可用）。",
+  "Error": "错误",
+  "Retry": "重试",
+  "G.LoadFailed": "无法加载该画廊。"
 }

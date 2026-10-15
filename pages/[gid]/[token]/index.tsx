@@ -4,7 +4,7 @@ import useGallery from '@/hooks/useGallery'
 import CommentList from '@/widgets/detail/CommentList'
 import Info from '@/widgets/detail/Info'
 import PageList from '@/widgets/detail/PageList'
-import { Divider } from '@mui/material'
+import { Button, Divider, Typography } from '@mui/material'
 import { Theme } from '@mui/material/styles'
 import createStyles from '@mui/styles/createStyles'
 import makeStyles from '@mui/styles/makeStyles'
@@ -74,10 +74,34 @@ const Detail: NextPage = () => {
   const token = router.query.token as string
   const [t] = useTranslation()
 
-  const { data } = useGallery({ url: `/${gid}/${token}` })
+  const { data, error, mutate, isValidating } = useGallery({
+    url: `/${gid}/${token}`,
+  })
   const classes = useStyles()
 
-  if (!data || data.error) {
+  const failed = Boolean(error || data?.error)
+
+  if (failed) {
+    return (
+      <Layout title={t('Error') || 'Error'} fullScreen showBack>
+        <div className={classes.loadingContainer}>
+          <Typography align="center" color="textSecondary" paragraph>
+            {t('G.LoadFailed') || 'Failed to load this gallery.'}
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => mutate()}
+            disabled={isValidating}
+          >
+            {t('Retry') || 'Retry'}
+          </Button>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (!data) {
     return (
       <Layout title={t('Loading') + '...'} fullScreen showBack>
         <Loading />

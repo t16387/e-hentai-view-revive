@@ -4,11 +4,14 @@ import {
   GalleryListMode,
   LIST_JUMP_MAX_WALK,
   SearchFilters,
-  estimateListPageCount,
   galleryListKey,
+  resolveListEstimatedPages,
 } from '@/utils/search'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSWRInfinite } from 'swr'
+
+/** Max EH pages to skip when a cursor page is empty after filters. */
+export const LIST_EMPTY_SKIP_MAX = 25
 
 export interface UseGalleryListOptions extends SearchFilters {
   mode: GalleryListMode
@@ -19,6 +22,8 @@ export default function useGalleryList(options: UseGalleryListOptions) {
   const [viewPage, setViewPage] = useState(0)
   const [jumping, setJumping] = useState(false)
   const [jumpError, setJumpError] = useState<string | null>(null)
+  /** When the cursor chain ends before EH's approximate total, clamp UI. */
+  const [knownLastIndex, setKnownLastIndex] = useState<number | null>(null)
   const jumpGen = useRef(0)
 
   const { data, error, size, setSize } = useSWRInfinite<GalleriesPage>(
@@ -36,6 +41,7 @@ export default function useGalleryList(options: UseGalleryListOptions) {
   useEffect(() => {
     setViewPage(0)
     setJumpError(null)
+    setKnownLastIndex(null)
     jumpGen.current++
     setSize(1)
   }, [filterIdentity, setSize])
@@ -51,11 +57,18 @@ export default function useGalleryList(options: UseGalleryListOptions) {
   const firstEmpty =
     !isLoadingInitialData && !!data?.[0] && (data[0].list?.length ?? 0) === 0
 
-  const pageSize = data?.[0]?.list?.length || 0
+  const rawPageSize = data?.[0]?.list?.length || 0
   const total = data?.[0]?.total ?? 0
   const totalText = data?.[0]?.totalText
-  const estimatedPages =
-    mode === 'popular' ? 1 : estimateListPageCount(total, pageSize)
+  const lastLoaded = data?.[pageCountLoaded - 1]
+  const effectiveEstimated = resolveListEstimatedPages({
+    mode,
+    total,
+    rawPageSize,
+    pageCountLoaded,
+    lastHasNext: !!lastLoaded?.next,
+    knownLastIndex,
+  })
 
   const hasPrev = viewPage > 0
   const hasNext =
@@ -68,10 +81,82 @@ export default function useGalleryList(options: UseGalleryListOptions) {
     mode === 'popular' ||
     (!!current && !current.next && viewPage + 1 >= pageCountLoaded)
 
+  const markEnd = useCallback((lastIndex: number) => {
+    setKnownLastIndex((prev) =>
+      prev == null ? lastIndex : Math.min(prev, lastIndex)
+    )
+  }, [])
+
+  /**
+   * After loading `pages`, advance past empty filtered EH pages (list=[])
+   * while `next` remains, up to LIST_EMPTY_SKIP_MAX. Returns the index to
+   * show, or -1 if the chain ended.
+   */
+  const skipEmptyForward = useCallback(
+    async (
+      pages: GalleriesPage[],
+      startIndex: number,
+      gen: number
+    ): Promise<{ pages: GalleriesPage[]; index: number; ended: boolean }> => {
+      let loaded = pages
+      let idx = startIndex
+      let skips = 0
+      while (
+        idx < loaded.length &&
+        (loaded[idx]?.list?.length ?? 0) === 0 &&
+        loaded[idx]?.next &&
+        skips < LIST_EMPTY_SKIP_MAX
+      ) {
+        if (jumpGen.current !== gen) {
+          return { pages: loaded, index: idx, ended: false }
+        }
+        skips++
+        const nextLen = loaded.length + 1
+        const grown = (await setSize(nextLen)) as GalleriesPage[] | undefined
+        if (!grown || grown.length <= loaded.length) {
+          markEnd(Math.max(0, loaded.length - 1))
+          return {
+            pages: grown ?? loaded,
+            index: Math.max(0, (grown?.length ?? loaded.length) - 1),
+            ended: true,
+          }
+        }
+        loaded = grown
+        idx = loaded.length - 1
+      }
+      if (
+        idx < loaded.length &&
+        (loaded[idx]?.list?.length ?? 0) === 0 &&
+        !loaded[idx]?.next
+      ) {
+        markEnd(idx)
+        return { pages: loaded, index: idx, ended: true }
+      }
+      return { pages: loaded, index: idx, ended: false }
+    },
+    [setSize, markEnd]
+  )
+
   const goNext = useCallback(async () => {
     setJumpError(null)
     if (viewPage + 1 < pageCountLoaded) {
-      setViewPage(viewPage + 1)
+      const nextIdx = viewPage + 1
+      const nextPage = data?.[nextIdx]
+      if (nextPage && (nextPage.list?.length ?? 0) === 0 && nextPage.next) {
+        const gen = ++jumpGen.current
+        setJumping(true)
+        try {
+          const result = await skipEmptyForward(data ?? [], nextIdx, gen)
+          if (jumpGen.current === gen) {
+            setViewPage(result.index)
+            if (result.ended) setJumpError('end')
+          }
+        } finally {
+          if (jumpGen.current === gen) setJumping(false)
+        }
+        return
+      }
+      setViewPage(nextIdx)
       return
     }
     if (!current?.next || mode === 'popular') return
@@ -79,12 +164,32 @@ export default function useGalleryList(options: UseGalleryListOptions) {
     const gen = ++jumpGen.current
     setJumping(true)
     try {
-      await setSize(nextIndex + 1)
-      if (jumpGen.current === gen) setViewPage(nextIndex)
+      const pages = (await setSize(nextIndex + 1)) as
+        | GalleriesPage[]
+        | undefined
+      if (!pages || pages.length <= nextIndex) {
+        markEnd(viewPage)
+        setJumpError('end')
+        return
+      }
+      const result = await skipEmptyForward(pages, nextIndex, gen)
+      if (jumpGen.current === gen) {
+        setViewPage(result.index)
+        if (result.ended) setJumpError('end')
+      }
     } finally {
       if (jumpGen.current === gen) setJumping(false)
     }
-  }, [viewPage, pageCountLoaded, current, mode, setSize])
+  }, [
+    viewPage,
+    pageCountLoaded,
+    current,
+    mode,
+    setSize,
+    data,
+    skipEmptyForward,
+    markEnd,
+  ])
 
   const goPrev = useCallback(() => {
     setJumpError(null)
@@ -99,8 +204,14 @@ export default function useGalleryList(options: UseGalleryListOptions) {
         setJumpError('invalid')
         return
       }
-      const target = Math.floor(page1Based) - 1
-      // Site totals are "about N"; do not hard-clamp jumps to estimatedPages.
+      let target = Math.floor(page1Based) - 1
+      // Clamp to discovered end when we already know the chain is shorter.
+      if (knownLastIndex != null && target > knownLastIndex) {
+        target = knownLastIndex
+        setJumpError('end')
+      }
+      // Site totals are "about N"; do not hard-clamp jumps to approxPages
+      // until the cursor chain proves a shorter end.
       if (target < pageCountLoaded) {
         setViewPage(target)
         return
@@ -114,42 +225,82 @@ export default function useGalleryList(options: UseGalleryListOptions) {
       setJumping(true)
       try {
         let loaded = pageCountLoaded
+        let pages = data as GalleriesPage[] | undefined
         if (loaded === 0) {
-          const pages = (await setSize(1)) as GalleriesPage[] | undefined
+          pages = (await setSize(1)) as GalleriesPage[] | undefined
           loaded = pages?.length ?? 0
           if (!loaded) return
         }
         while (loaded - 1 < target) {
           if (jumpGen.current !== gen) return
           // setSize appends using the previous page's next cursor from SWR.
-          const pages = (await setSize(loaded + 1)) as
-            | GalleriesPage[]
-            | undefined
+          pages = (await setSize(loaded + 1)) as GalleriesPage[] | undefined
           if (!pages || pages.length <= loaded) {
+            const last = Math.max(0, (pages?.length ?? 1) - 1)
+            markEnd(last)
             setJumpError('end')
-            setViewPage(Math.max(0, (pages?.length ?? 1) - 1))
+            setViewPage(last)
             return
           }
           const justFetched = pages[loaded]
           const previous = pages[loaded - 1]
           if (!previous?.next && loaded - 1 < target) {
+            markEnd(loaded - 1)
             setJumpError('end')
             setViewPage(loaded - 1)
             return
           }
           if (!justFetched) {
+            markEnd(loaded - 1)
             setJumpError('end')
             setViewPage(loaded - 1)
             return
           }
+          // Skip empty filtered pages while walking toward target so we do
+          // not stop short or land on a blank EH page.
+          if ((justFetched.list?.length ?? 0) === 0 && justFetched.next) {
+            const skipped = await skipEmptyForward(pages, loaded, gen)
+            pages = skipped.pages
+            loaded = pages.length
+            if (skipped.ended) {
+              setJumpError('end')
+              setViewPage(skipped.index)
+              return
+            }
+            continue
+          }
+          if ((justFetched.list?.length ?? 0) === 0 && !justFetched.next) {
+            markEnd(loaded)
+            setJumpError('end')
+            setViewPage(loaded)
+            return
+          }
           loaded = pages.length
         }
-        if (jumpGen.current === gen) setViewPage(target)
+        if (jumpGen.current === gen) {
+          // If the target page itself is empty, skip forward to content.
+          const at = pages?.[target]
+          if (at && (at.list?.length ?? 0) === 0 && at.next) {
+            const skipped = await skipEmptyForward(pages!, target, gen)
+            setViewPage(skipped.index)
+            if (skipped.ended) setJumpError('end')
+          } else {
+            setViewPage(target)
+          }
+        }
       } finally {
         if (jumpGen.current === gen) setJumping(false)
       }
     },
-    [mode, pageCountLoaded, setSize]
+    [
+      mode,
+      pageCountLoaded,
+      setSize,
+      data,
+      knownLastIndex,
+      markEnd,
+      skipEmptyForward,
+    ]
   )
 
   return {
@@ -161,10 +312,10 @@ export default function useGalleryList(options: UseGalleryListOptions) {
     error,
     viewPage,
     page: viewPage + 1,
-    pageSize,
+    pageSize: rawPageSize,
     total,
     totalText,
-    estimatedPages,
+    estimatedPages: effectiveEstimated,
     hasNext,
     hasPrev,
     goNext,
