@@ -105,20 +105,23 @@ const GalleryList: React.FC<GalleryListProps> = (props) => {
             .fill(0)
             .map((_, k) => <LoadingCard key={`more-${k}`} />)}
       </Grid>
-      {canPaginate && !isLoadingInitialData && !isEmpty && (
-        <ListPagination
-          page={page}
-          estimatedPages={estimatedPages}
-          totalText={totalText}
-          hasPrev={hasPrev}
-          hasNext={hasNext}
-          disabled={jumping || isLoadingMore}
-          jumpError={jumpError}
-          onPrev={goPrev}
-          onNext={goNext}
-          onJump={goToPage}
-        />
-      )}
+      {canPaginate &&
+        !isLoadingInitialData &&
+        !isEmpty &&
+        dataSource.length > 0 && (
+          <ListPagination
+            page={page}
+            estimatedPages={estimatedPages}
+            totalText={totalText}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            disabled={jumping || isLoadingMore}
+            jumpError={jumpError}
+            onPrev={goPrev}
+            onNext={goNext}
+            onJump={goToPage}
+          />
+        )}
     </>
   )
 }

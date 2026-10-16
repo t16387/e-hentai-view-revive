@@ -7,9 +7,11 @@ import {
   clearJumpingOnCancel,
   clampListJumpTarget,
   galleryListKey,
+  lastNonEmptyListIndex,
   mergeListPagerQuery,
   readListPagerQuery,
   resolveListEstimatedPages,
+  shouldMarkListEnd,
 } from '@/utils/search'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -112,9 +114,20 @@ export default function useGalleryList(options: UseGalleryListOptions) {
   const current = data?.[viewPage]
   const dataSource: IndexListItemPorps[] = current?.list ?? []
   const isLoadingInitialData = !data && !error
+  // If size grew past loaded pages but the request errored, do not keep
+  // controls disabled forever (waitingOnPage would otherwise stay true).
   const waitingOnPage =
-    size > 0 && data && typeof data[size - 1] === 'undefined'
+    !error && size > 0 && data && typeof data[size - 1] === 'undefined'
   const isLoadingMore = isLoadingInitialData || !!waitingOnPage || jumping
+
+  // Soft-fail safety: never leave SWR size > successfully loaded pages.
+  useEffect(() => {
+    if (!error) return
+    const loaded = data?.length ?? 0
+    if (size > loaded) {
+      void setSize(Math.max(1, loaded || 1))
+    }
+  }, [error, size, data?.length, setSize])
 
   const firstEmpty =
     !isLoadingInitialData && !!data?.[0] && (data[0].list?.length ?? 0) === 0
@@ -133,17 +146,34 @@ export default function useGalleryList(options: UseGalleryListOptions) {
     currentPage: viewPage + 1,
   })
 
-  // Drop stale knownLast from URL when we have clearly loaded past it.
+  // Drop stale knownLast from URL when chain clearly continues past it.
   useEffect(() => {
     if (knownLastIndex == null) return
     if (pageCountLoaded > knownLastIndex + 1) {
       setKnownLastIndex(null)
       return
     }
+    if (knownLastIndex < pageCountLoaded && !!data?.[knownLastIndex]?.next) {
+      setKnownLastIndex(null)
+      return
+    }
     if (viewPage > knownLastIndex && !!lastLoaded?.next) {
       setKnownLastIndex(null)
     }
-  }, [knownLastIndex, pageCountLoaded, viewPage, lastLoaded?.next])
+  }, [knownLastIndex, pageCountLoaded, viewPage, lastLoaded?.next, data])
+
+  // After jump/end on a blank page, snap to the last non-empty so Back
+  // does not show stacked pagers around an empty grid.
+  useEffect(() => {
+    if (jumping || isLoadingMore || isLoadingInitialData) return
+    if (!data?.length) return
+    const cur = data[viewPage]
+    if (!cur) return
+    if ((cur.list?.length ?? 0) > 0) return
+    if (cur.next) return
+    const snap = lastNonEmptyListIndex(data, viewPage)
+    if (snap !== viewPage) setViewPage(snap)
+  }, [data, viewPage, jumping, isLoadingMore, isLoadingInitialData])
 
   const hasPrev = viewPage > 0
   const hasNext =
@@ -162,6 +192,15 @@ export default function useGalleryList(options: UseGalleryListOptions) {
     )
   }, [])
 
+  /** Reset SWR size to loaded pages so waitingOnPage cannot stick. */
+  const resetSizeToLoaded = useCallback(
+    (pages: GalleriesPage[] | undefined, fallbackLen: number) => {
+      const n = Math.max(1, pages?.length ?? fallbackLen)
+      void setSize(n)
+    },
+    [setSize]
+  )
+
   /**
    * After loading `pages`, advance past empty filtered EH pages (list=[])
    * while `next` remains, up to LIST_EMPTY_SKIP_MAX. Returns the index to
@@ -172,7 +211,12 @@ export default function useGalleryList(options: UseGalleryListOptions) {
       pages: GalleriesPage[],
       startIndex: number,
       gen: number
-    ): Promise<{ pages: GalleriesPage[]; index: number; ended: boolean }> => {
+    ): Promise<{
+      pages: GalleriesPage[]
+      index: number
+      ended: boolean
+      loadFailed?: boolean
+    }> => {
       let loaded = pages
       let idx = startIndex
       let skips = 0
@@ -189,11 +233,16 @@ export default function useGalleryList(options: UseGalleryListOptions) {
         const nextLen = loaded.length + 1
         const grown = (await setSize(nextLen)) as GalleriesPage[] | undefined
         if (!grown || grown.length <= loaded.length) {
-          markEnd(Math.max(0, loaded.length - 1))
+          // Soft failure — do not markEnd; reset size so controls unlock.
+          resetSizeToLoaded(grown ?? loaded, loaded.length)
           return {
             pages: grown ?? loaded,
-            index: Math.max(0, (grown?.length ?? loaded.length) - 1),
-            ended: true,
+            index: lastNonEmptyListIndex(
+              grown ?? loaded,
+              Math.max(0, (grown?.length ?? loaded.length) - 1)
+            ),
+            ended: false,
+            loadFailed: true,
           }
         }
         loaded = grown
@@ -202,14 +251,15 @@ export default function useGalleryList(options: UseGalleryListOptions) {
       if (
         idx < loaded.length &&
         (loaded[idx]?.list?.length ?? 0) === 0 &&
-        !loaded[idx]?.next
+        shouldMarkListEnd({ next: loaded[idx]?.next, grew: true })
       ) {
         markEnd(idx)
-        return { pages: loaded, index: idx, ended: true }
+        const snap = lastNonEmptyListIndex(loaded, idx)
+        return { pages: loaded, index: snap, ended: true }
       }
       return { pages: loaded, index: idx, ended: false }
     },
-    [setSize, markEnd]
+    [setSize, markEnd, resetSizeToLoaded]
   )
 
   const goNext = useCallback(async () => {
@@ -224,7 +274,8 @@ export default function useGalleryList(options: UseGalleryListOptions) {
           const result = await skipEmptyForward(data ?? [], nextIdx, gen)
           if (jumpGen.current === gen) {
             setViewPage(result.index)
-            if (result.ended) setJumpError('end')
+            if (result.loadFailed) setJumpError('loadFailed')
+            else if (result.ended) setJumpError('end')
           }
         } finally {
           if (jumpGen.current === gen) setJumping(false)
@@ -243,14 +294,15 @@ export default function useGalleryList(options: UseGalleryListOptions) {
         | GalleriesPage[]
         | undefined
       if (!pages || pages.length <= nextIndex) {
-        markEnd(viewPage)
-        setJumpError('end')
+        resetSizeToLoaded(pages, pageCountLoaded || viewPage + 1)
+        setJumpError('loadFailed')
         return
       }
       const result = await skipEmptyForward(pages, nextIndex, gen)
       if (jumpGen.current === gen) {
         setViewPage(result.index)
-        if (result.ended) setJumpError('end')
+        if (result.loadFailed) setJumpError('loadFailed')
+        else if (result.ended) setJumpError('end')
       }
     } finally {
       if (jumpGen.current === gen) setJumping(false)
@@ -263,7 +315,7 @@ export default function useGalleryList(options: UseGalleryListOptions) {
     setSize,
     data,
     skipEmptyForward,
-    markEnd,
+    resetSizeToLoaded,
   ])
 
   const goPrev = useCallback(() => {
@@ -280,12 +332,40 @@ export default function useGalleryList(options: UseGalleryListOptions) {
         return
       }
       let target = Math.floor(page1Based) - 1
-      const clamped = clampListJumpTarget(target, knownLastIndex)
+
+      // Stale knownLast: user Go's beyond it while that page still has next.
+      let known = knownLastIndex
+      if (known != null && known < pageCountLoaded && !!data?.[known]?.next) {
+        setKnownLastIndex(null)
+        known = null
+      }
+
+      const clamped = clampListJumpTarget(target, known)
       target = clamped.target
       if (clamped.clamped) setJumpError('end')
       // Site totals are "about N"; do not hard-clamp jumps to approxPages
       // until the cursor chain proves a shorter end.
       if (target < pageCountLoaded) {
+        const at = data?.[target]
+        if (at && (at.list?.length ?? 0) === 0 && at.next) {
+          const gen = ++jumpGen.current
+          setJumping(true)
+          try {
+            const result = await skipEmptyForward(data ?? [], target, gen)
+            if (jumpGen.current === gen) {
+              setViewPage(result.index)
+              if (result.loadFailed) setJumpError('loadFailed')
+              else if (result.ended) setJumpError('end')
+            }
+          } finally {
+            if (jumpGen.current === gen) setJumping(false)
+          }
+          return
+        }
+        if (at && (at.list?.length ?? 0) === 0 && !at.next) {
+          setViewPage(lastNonEmptyListIndex(data ?? [], target))
+          return
+        }
         setViewPage(target)
         return
       }
@@ -302,31 +382,42 @@ export default function useGalleryList(options: UseGalleryListOptions) {
         if (loaded === 0) {
           pages = (await setSize(1)) as GalleriesPage[] | undefined
           loaded = pages?.length ?? 0
-          if (!loaded) return
+          if (!loaded) {
+            setJumpError('loadFailed')
+            return
+          }
         }
         while (loaded - 1 < target) {
           if (jumpGen.current !== gen) return
           // setSize appends using the previous page's next cursor from SWR.
           pages = (await setSize(loaded + 1)) as GalleriesPage[] | undefined
           if (!pages || pages.length <= loaded) {
-            const last = Math.max(0, (pages?.length ?? 1) - 1)
-            markEnd(last)
-            setJumpError('end')
-            setViewPage(last)
+            // Soft failure: do not markEnd / write last=; unlock controls.
+            resetSizeToLoaded(pages, loaded)
+            setJumpError('loadFailed')
+            setViewPage(
+              lastNonEmptyListIndex(
+                pages ?? data ?? [],
+                Math.max(0, loaded - 1)
+              )
+            )
             return
           }
           const justFetched = pages[loaded]
           const previous = pages[loaded - 1]
-          if (!previous?.next && loaded - 1 < target) {
+          if (
+            shouldMarkListEnd({ next: previous?.next, grew: true }) &&
+            loaded - 1 < target
+          ) {
             markEnd(loaded - 1)
             setJumpError('end')
-            setViewPage(loaded - 1)
+            setViewPage(lastNonEmptyListIndex(pages, loaded - 1))
             return
           }
           if (!justFetched) {
-            markEnd(loaded - 1)
-            setJumpError('end')
-            setViewPage(loaded - 1)
+            resetSizeToLoaded(pages, loaded)
+            setJumpError('loadFailed')
+            setViewPage(lastNonEmptyListIndex(pages, loaded - 1))
             return
           }
           // Skip empty filtered pages while walking toward target so we do
@@ -335,6 +426,11 @@ export default function useGalleryList(options: UseGalleryListOptions) {
             const skipped = await skipEmptyForward(pages, loaded, gen)
             pages = skipped.pages
             loaded = pages.length
+            if (skipped.loadFailed) {
+              setJumpError('loadFailed')
+              setViewPage(skipped.index)
+              return
+            }
             if (skipped.ended) {
               setJumpError('end')
               setViewPage(skipped.index)
@@ -345,10 +441,16 @@ export default function useGalleryList(options: UseGalleryListOptions) {
             if (jumpGen.current !== gen) return
             continue
           }
-          if ((justFetched.list?.length ?? 0) === 0 && !justFetched.next) {
+          if (
+            shouldMarkListEnd({
+              next: justFetched.next,
+              grew: true,
+            }) &&
+            (justFetched.list?.length ?? 0) === 0
+          ) {
             markEnd(loaded)
             setJumpError('end')
-            setViewPage(loaded)
+            setViewPage(lastNonEmptyListIndex(pages, loaded))
             return
           }
           loaded = pages.length
@@ -360,8 +462,13 @@ export default function useGalleryList(options: UseGalleryListOptions) {
             const skipped = await skipEmptyForward(pages!, target, gen)
             if (jumpGen.current === gen) {
               setViewPage(skipped.index)
-              if (skipped.ended) setJumpError('end')
+              if (skipped.loadFailed) setJumpError('loadFailed')
+              else if (skipped.ended) setJumpError('end')
             }
+          } else if (at && (at.list?.length ?? 0) === 0 && !at.next) {
+            markEnd(target)
+            setJumpError('end')
+            setViewPage(lastNonEmptyListIndex(pages ?? [], target))
           } else {
             setViewPage(target)
           }
@@ -378,6 +485,7 @@ export default function useGalleryList(options: UseGalleryListOptions) {
       knownLastIndex,
       markEnd,
       skipEmptyForward,
+      resetSizeToLoaded,
     ]
   )
 

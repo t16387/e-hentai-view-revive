@@ -291,6 +291,11 @@ const ListPaginationV4: React.FC<ListPaginationProps> = ({
           {t('List.JumpInvalid')}
         </Typography>
       ) : null}
+      {jumpError === 'loadFailed' ? (
+        <Typography variant="caption" color="error" className={classes.hint}>
+          {t('List.JumpLoadFailed')}
+        </Typography>
+      ) : null}
     </Box>
   )
 }

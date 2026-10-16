@@ -132,6 +132,7 @@
   "List.JumpTooFar": "Jump is limited to 50 pages ahead (site uses cursors, not page numbers).",
   "List.JumpEnd": "Reached the last available page.",
   "List.JumpInvalid": "Enter a page number of 1 or greater.",
+  "List.JumpLoadFailed": "Could not load that page. Try again.",
   "History.DoNotStore": "Jangan simpan sejarah",
   "History.DoNotStore.Hint": "Bila dihidupkan, melayari galeri dan membaca halaman tidak menulis sejarah. Rekod sedia ada kekal sehingga anda padam.",
   "History.Clear": "Kosongkan sejarah",

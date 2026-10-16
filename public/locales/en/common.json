@@ -132,6 +132,7 @@
   "List.JumpTooFar": "Jump is limited to 50 pages ahead (site uses cursors, not page numbers).",
   "List.JumpEnd": "Reached the last available page.",
   "List.JumpInvalid": "Enter a page number of 1 or greater.",
+  "List.JumpLoadFailed": "Could not load that page. Try again.",
   "History.DoNotStore": "Do not store history",
   "History.DoNotStore.Hint": "When on, browsing galleries and reading pages will not write to Histories or read-position storage. Existing entries stay until you clear them.",
   "History.Clear": "Clear history",

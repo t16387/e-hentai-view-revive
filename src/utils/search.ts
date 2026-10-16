@@ -558,3 +558,30 @@ export function clearJumpingOnCancel(
   jumpGen.current++
   setJumping(false)
 }
+
+/**
+ * True only when a successfully grown page has no further cursor.
+ * A failed setSize (grew=false) must not permanently clamp the pager.
+ */
+export function shouldMarkListEnd(opts: {
+  next: string | null | undefined
+  grew: boolean
+}): boolean {
+  return opts.grew === true && !opts.next
+}
+
+/**
+ * Highest index ≤ fromIndex whose list has at least one item.
+ * Used to snap the UI off blank filtered pages after a jump/end.
+ */
+export function lastNonEmptyListIndex(
+  pages: { list?: unknown[] | null }[],
+  fromIndex: number
+): number {
+  if (!pages.length) return 0
+  const start = Math.min(Math.max(0, Math.floor(fromIndex)), pages.length - 1)
+  for (let i = start; i >= 0; i--) {
+    if ((pages[i]?.list?.length ?? 0) > 0) return i
+  }
+  return start
+}

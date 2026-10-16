@@ -132,6 +132,7 @@
   "List.JumpTooFar": "한 번에 앞으로 최대 50쪽까지 이동할 수 있습니다(사이트는 페이지 번호가 아닌 커서를 사용).",
   "List.JumpEnd": "마지막 페이지입니다.",
   "List.JumpInvalid": "1 이상의 페이지 번호를 입력하세요.",
+  "List.JumpLoadFailed": "해당 페이지를 불러오지 못했습니다. 다시 시도하세요.",
   "History.DoNotStore": "기록 저장 안 함",
   "History.DoNotStore.Hint": "켜면 갤러리 열람·읽기 위치를 기록하지 않습니다. 기존 기록은 삭제할 때까지 유지됩니다.",
   "History.Clear": "기록 지우기",

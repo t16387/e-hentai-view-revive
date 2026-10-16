@@ -10,6 +10,8 @@ import {
   catsToHideMask,
   clearJumpingOnCancel,
   clampListJumpTarget,
+  lastNonEmptyListIndex,
+  shouldMarkListEnd,
   composeSearchQuery,
   estimateListPageCount,
   extractAiFilter,
@@ -473,5 +475,61 @@ describe('list pager Y never below X', () => {
         currentPage: 3,
       })
     ).toBeNull()
+  })
+})
+
+describe('shouldMarkListEnd / lastNonEmptyListIndex', () => {
+  it('marks end only when grew and next is null', () => {
+    expect(shouldMarkListEnd({ next: null, grew: true })).toBe(true)
+    expect(shouldMarkListEnd({ next: undefined, grew: true })).toBe(true)
+    expect(shouldMarkListEnd({ next: '', grew: true })).toBe(true)
+    expect(shouldMarkListEnd({ next: '123', grew: true })).toBe(false)
+    // Soft failure: setSize did not grow — never permanent end
+    expect(shouldMarkListEnd({ next: null, grew: false })).toBe(false)
+    expect(shouldMarkListEnd({ next: '123', grew: false })).toBe(false)
+  })
+
+  it('snaps to last non-empty page index', () => {
+    const pages = [
+      { list: [{ gid: 1 }] },
+      { list: [{ gid: 2 }] },
+      { list: [] },
+      { list: [] },
+    ]
+    expect(lastNonEmptyListIndex(pages, 3)).toBe(1)
+    expect(lastNonEmptyListIndex(pages, 1)).toBe(1)
+    expect(lastNonEmptyListIndex([{ list: [] }], 0)).toBe(0)
+    expect(lastNonEmptyListIndex([], 5)).toBe(0)
+  })
+})
+
+describe('resolveListEstimatedPages keeps Y while lastHasNext', () => {
+  it('does not shrink Y to loaded count when last page still has next', () => {
+    // Failed mid-walk left 13 pages loaded but next still exists → stay ~32
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 800,
+        rawPageSize: 25,
+        pageCountLoaded: 13,
+        lastHasNext: true,
+        knownLastIndex: null,
+        currentPage: 13,
+      })
+    ).toBe(32)
+  })
+
+  it('shrinks Y only when lastHasNext is false (true cursor end)', () => {
+    expect(
+      resolveListEstimatedPages({
+        mode: 'index',
+        total: 800,
+        rawPageSize: 25,
+        pageCountLoaded: 13,
+        lastHasNext: false,
+        knownLastIndex: null,
+        currentPage: 13,
+      })
+    ).toBe(13)
   })
 })

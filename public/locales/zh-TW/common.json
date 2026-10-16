@@ -132,6 +132,7 @@
   "List.JumpTooFar": "一次最多向前跳 50 頁（站點使用游標分頁，不是頁碼）。",
   "List.JumpEnd": "已到最後一頁。",
   "List.JumpInvalid": "請輸入 ≥ 1 的頁碼。",
+  "List.JumpLoadFailed": "無法載入該頁，請重試。",
   "History.DoNotStore": "不儲存歷史記錄",
   "History.DoNotStore.Hint": "開啟後，瀏覽相簿與閱讀頁碼不會寫入歷史或閱讀進度。已有記錄會保留，直到你手動清除。",
   "History.Clear": "清除歷史記錄",
