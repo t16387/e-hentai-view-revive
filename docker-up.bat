@@ -37,5 +37,6 @@ echo [ehv] Local:  http://localhost:3000  (or EHV_HOST_PORT from .env)
 echo [ehv] Phone/tablet: http://^<this-PC-LAN-IP^>:3000
 echo [ehv]   Find IP: ipconfig   look for IPv4 under Wi-Fi / Ethernet
 echo [ehv] Stop: docker-down.bat   or   docker compose down
+echo [ehv] Optional password Sign In: docker compose --profile auth up -d  (FlareSolverr, no host port)
 echo [ehv] Docs: DOCKER.md
 exit /b 0

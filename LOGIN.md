@@ -13,7 +13,7 @@ This app is a **Next.js page in your browser** (localhost or a LAN IP). It canno
 3. DevTools → Application → Cookies → copy values, or paste a full dump (`ipb_member_id=…; ipb_pass_hash=…; igneous=…`).
 4. **Save cookies & sign in**. Cookies are stored as HttpOnly on this origin.
 
-Username/password (FlareSolverr) remains available as a fallback accordion.
+Username/password (FlareSolverr) remains available as a fallback accordion. With Docker Compose, start the optional solver with `docker compose --profile auth up -d` (no host port; Compose DNS only). Prefer Browser login.
 
 ## Phone / tablet (iOS Safari, Android Chrome)
 

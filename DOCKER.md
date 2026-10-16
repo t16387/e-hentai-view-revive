@@ -121,10 +121,11 @@ There are **no** cookie env vars. Do not invent `IPB_*`, `IGNEOUS`, or similar i
    - **Save cookies & sign in**. The server stores them as HttpOnly on this origin. Native apps (EhViewer/JHenTai) do this inside a WebView; a localhost SPA cannot capture cross-origin cookies automatically.
 2. Optional: expand **Try username / password (FlareSolverr)**. This often fails on interactive Turnstile — use Browser login instead.
 3. **FlareSolverr** (only for the password path on `forums.e-hentai.org`):
-   - Compose default: `EHV_FLARESOLVERR_URL=http://flaresolverr:8191/v1` (the `flaresolverr` service on the same compose network). Host port **8191** is also published for debugging.
-   - External solver: `EHV_FLARESOLVERR_URL=http://host.docker.internal:8191/v1`.
+   - **Not started by default.** Default `docker compose up -d` / `./start.sh` / `docker-up.bat` runs **only** `ehv` (app on `EHV_HOST_PORT`). The solver is under Compose profile **`auth`** and has **no host port** — it is reachable only via Compose DNS when enabled.
+   - Enable password-login helper: `docker compose --profile auth up -d` (starts `flaresolverr` + `ehv`). URL default: `EHV_FLARESOLVERR_URL=http://flaresolverr:8191/v1`.
+   - External solver on the Docker host: `EHV_FLARESOLVERR_URL=http://host.docker.internal:8191/v1` (do **not** publish FlareSolverr on `0.0.0.0` — it has no auth).
    - Official FlareSolverr supports `request.post`. Byparr-compatible solvers are **GET-only**; the app falls back to clearance-cookie + direct POST when POST is unavailable.
-   - If the solver cannot clear Turnstile, Sign In returns `code: "flaresolverr"` (not a bare Cloudflare page). Use **Advanced** cookie paste as fallback, or update/restart the solver.
+   - If the solver cannot clear Turnstile, Sign In returns `code: "flaresolverr"` (not a bare Cloudflare page). Use **Browser login** / Advanced cookie paste instead.
 3. In **Settings → Gallery site**, switch to **exhentai.org** (requires login cookies + valid `igneous`; password login tries to obtain `igneous` when possible).
 4. Session cookies stay in **your browser** (HttpOnly on the app origin). The Node server forwards them upstream; they are **never** written into the image, Compose file, or `.env`.
 
@@ -147,6 +148,7 @@ volumes:
 - **Clear downloads** in Settings deletes gallery folders under that path (same `EHV_DOWNLOADS_DIR` the server uses).
 - Host content under `./downloads` (and bare-Node `./data`) is **gitignored** — do not commit manga files.
 - Bare Node (no Docker): set `EHV_DOWNLOADS_DIR` (or alias `EHV_DOWNLOAD_DIR`); default is `./data/downloads`.
+- **Auth:** `/api/downloads` (list, zip, images, enqueue, delete) requires a logged-in app session so a LAN peer cannot read or wipe offline galleries. Sign In once on the URL you use (localhost vs LAN IP cookies differ).
 
 ## Security
 
@@ -155,6 +157,8 @@ volumes:
 | `.env` | Gitignored (`.env`, `.env.*`). Holds machine-local Compose settings only. |
 | `.env.example` | Safe template committed to git — placeholders and comments only. |
 | Gallery cookies / passwords | In-app Sign In only — never env, never Dockerfile `ENV`, never `docker commit` of a logged-in container. |
+| FlareSolverr | Compose profile **`auth` only**; **no** host port publish. Default `up` is app-only. |
+| Offline downloads API | Requires a Sign-In session (`ipb_member_id` + `ipb_pass_hash` cookies), even on public e-hentai. |
 | Image | Built from source + lockfile; runtime user `node`; no secrets in layers. |
 
 ## Compose (everyday) vs bare Node

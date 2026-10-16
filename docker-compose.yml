@@ -11,8 +11,8 @@
 # LAN / phone: http://<host-LAN-IP>:<EHV_HOST_PORT>  — see DOCKER.md § LAN access
 #
 # Auth: Browser login (open forums + paste cookies) is recommended. Password+FlareSolverr
-# may still fail on Turnstile (EHV_FLARESOLVERR_URL). Never put
-# gallery cookies or passwords in .env or the image.
+# may still fail on Turnstile — enable the optional auth profile (see DOCKER.md).
+# Never put gallery cookies or passwords in .env or the image.
 # Host/browser port = EHV_HOST_PORT (default 3000) → container PORT 8080.
 # Bind 0.0.0.0 so other devices on the LAN can connect (not 127.0.0.1-only).
 
@@ -34,13 +34,13 @@ services:
       EHV_SITE: ${EHV_SITE:-e-hentai}
       EHV_PROXY: ${EHV_PROXY:-}
       EHV_USER_AGENT: ${EHV_USER_AGENT:-}
-      # Same-compose DNS (preferred). Override for an external solver if needed.
+      # Used only when the auth profile (FlareSolverr) is running. Browser login
+      # does not need it. Override for an external solver if needed.
       EHV_FLARESOLVERR_URL: ${EHV_FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
       EHV_DOWNLOADS_DIR: /app/data/downloads
     volumes:
       - ${EHV_DOWNLOADS_HOST:-./downloads}:/app/data/downloads
-    depends_on:
-      - flaresolverr
+    # FlareSolverr is optional (profiles: [auth]); do not hard-depend on it.
     restart: unless-stopped
     healthcheck:
       test:
@@ -55,13 +55,15 @@ services:
       retries: 3
       start_period: 40s
 
-  # Official FlareSolverr (request.get + request.post). Used only for password login.
+  # Official FlareSolverr (request.get + request.post). Password login only.
+  # Not started by default — no host port publish (open solver on the LAN is unsafe).
+  # Enable:  docker compose --profile auth up -d
+  # ehv reaches the solver via Compose DNS: http://flaresolverr:8191/v1
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: ehv-flaresolverr
+    profiles: ["auth"]
     environment:
       LOG_LEVEL: info
-    ports:
-      # Optional host publish for debugging; ehv uses the service name on the compose network.
-      - "0.0.0.0:${EHV_FLARESOLVERR_HOST_PORT:-8191}:8191"
+    # Intentionally no ports: — keep the solver off the host/LAN.
     restart: unless-stopped
