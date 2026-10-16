@@ -4,6 +4,7 @@ import TagShow from '@/widgets/setting/TagShow'
 import ThemeMode from '@/widgets/setting/ThemeMode'
 import UiTheme from '@/widgets/setting/UiTheme'
 import DoNotStoreHistory from '@/widgets/setting/DoNotStoreHistory'
+import ClearWatchHistory from '@/widgets/setting/ClearWatchHistory'
 import ShowDownloadsNav from '@/widgets/setting/ShowDownloadsNav'
 import ClearCache from '@/widgets/setting/ClearCache'
 import ClearDownloads from '@/widgets/setting/ClearDownloads'
@@ -30,6 +31,7 @@ const Advanced: NextPage = () => {
         <UiTheme />
         <TagShow />
         <DoNotStoreHistory />
+        <ClearWatchHistory />
         <ShowDownloadsNav />
         <ClearCache />
         <ClearDownloads />
