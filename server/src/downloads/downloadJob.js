@@ -53,19 +53,49 @@ function extFromContentType(ct, url) {
   return 'jpg'
 }
 
+// Match /api/gallery/proxy: follow redirects by hand so every hop is checked
+// against the allowlist (axios maxRedirects would follow to any host).
+const DOWNLOAD_MAX_REDIRECTS = 2
+
+/** next hop of an image redirect, or null when it leaves the allowlist */
+function redirectTarget(location, from) {
+  if (!location) return null
+  let next
+  try {
+    next = new URL(location, from).href
+  } catch (e) {
+    return null
+  }
+  return isAllowedImageUrl(next) ? canonicalUrl(next) : null
+}
+
 async function fetchImageBuffer(url, cookies) {
-  const target = canonicalUrl(url)
+  let target = canonicalUrl(url)
   if (!target || !isAllowedImageUrl(target)) {
     throw Object.assign(new Error('image url not allowed'), { code: 'EBADURL' })
   }
-  await assertPublicImageHost(target)
-  const response = await axios.get(target, {
-    headers: isSiteUrl(target) ? { Cookie: cookies } : {},
-    responseType: 'arraybuffer',
-    timeout: PROXY_TIMEOUT,
-    maxRedirects: 2,
-    validateStatus: (s) => s >= 200 && s < 300,
-  })
+  let response
+  for (let hop = 0; ; hop++) {
+    await assertPublicImageHost(target)
+    response = await axios.get(target, {
+      headers: isSiteUrl(target) ? { Cookie: cookies } : {},
+      responseType: 'arraybuffer',
+      timeout: PROXY_TIMEOUT,
+      maxRedirects: 0,
+      validateStatus: (s) => s >= 200 && s < 400,
+    })
+    const status = response.status || 200
+    if (status < 300) break
+    const next =
+      hop < DOWNLOAD_MAX_REDIRECTS &&
+      redirectTarget(response.headers && response.headers.location, target)
+    if (!next) {
+      throw Object.assign(new Error('image host redirect refused'), {
+        code: 'EREDIRECT',
+      })
+    }
+    target = next
+  }
   const buf = Buffer.from(response.data)
   const ext = extFromContentType(
     response.headers && response.headers['content-type'],
