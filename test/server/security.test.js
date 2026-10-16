@@ -141,3 +141,23 @@ describe('app security middleware', () => {
     expect(r.json && r.json.message).not.toBe('csrf rejected')
   })
 })
+
+describe('favorites CSRF + gid validation', () => {
+  it('rejects bare PUT /api/favorites/add without CSRF', async () => {
+    const r = await req('PUT', '/api/favorites/add/1/abcdef0123', {
+      headers: { cookie: 'ipb_member_id=1; ipb_pass_hash=x' },
+    })
+    expect(r.status).toBe(403)
+    expect(r.json).toMatchObject({ error: true, message: 'csrf rejected' })
+  })
+
+  it('rejects bad gid/token even with CSRF', async () => {
+    const r = await req('PUT', '/api/favorites/add/not-a-gid/zzzz', {
+      headers: {
+        'x-ehv-csrf': '1',
+        cookie: 'ipb_member_id=1; ipb_pass_hash=x',
+      },
+    })
+    expect(r.status).toBe(400)
+  })
+})

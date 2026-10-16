@@ -43,9 +43,23 @@ router.get('/info', async (req, res) => {
   res.json({ error: false, list })
 })
 
+const isGalleryRef = (gid, token) =>
+  /^\d{1,12}$/.test(gid) && /^[0-9a-f]{1,40}$/.test(token)
+
 router.put('/add/:gid/:token', async (req, res) => {
   const { gid, token } = req.params
-  const { favcat } = req.query
+  if (!isGalleryRef(gid, token)) {
+    return res.status(400).json({ error: true, message: 'bad request' })
+  }
+  const favcat = req.query && req.query.favcat
+  if (
+    favcat !== undefined &&
+    favcat !== null &&
+    favcat !== '' &&
+    !(favcat === 'all' || /^\d$/.test(String(favcat)))
+  ) {
+    return res.status(400).json({ error: true, message: 'bad request' })
+  }
   await updateFavorite(
     { gid, token, favcat },
     upstreamCookieString(req.cookies)

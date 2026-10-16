@@ -64,6 +64,7 @@ const CSRF_PATHS = [
   '/api/user/setting',
   '/api/user/site',
   '/api/downloads',
+  '/api/favorites',
   '/api/cache/clear',
 ]
 
