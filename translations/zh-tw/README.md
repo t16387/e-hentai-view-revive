@@ -66,6 +66,17 @@ cp .env.example .env
 | 只改站點／代理／埠號 | 編輯 `.env`，再重啟 Compose（不必重建） |
 | 手機／平板區網存取 | 開啟 `http://<區網IP>:<EHV_HOST_PORT>`（見 DOCKER.md） |
 
+### macOS
+
+1. 安裝 [Docker Desktop](https://www.docker.com/products/docker-desktop/)（建議）**或** Node ≥20.9 + pnpm 10。
+2. `cp .env.example .env`，然後擇一：
+   - **一鍵：** `./scripts/run-mac.sh`（有映像 `ehentai-view:revive` 就走 Docker；否則可建置／裸跑 Node）
+   - **Compose：** 載入／建置映像後 `./start.sh`
+   - **裸跑 Node：** `pnpm install` → `pnpm build` → `pnpm start`
+3. 開啟 http://localhost:3000（或 `EHV_HOST_PORT`）。區網：`ipconfig getifaddr en0` → `http://<IP>:<port>`。
+
+AI／貢獻者入口：**[AGENTS.md](../../AGENTS.md)**。人類檢查清單：**[SETUP.md](../../SETUP.md)**。
+
 ### 環境變數
 
 複製 `.env.example` → `.env`。**切勿提交 `.env`。** 切勿把圖庫 Cookie 寫進環境變數或映像。

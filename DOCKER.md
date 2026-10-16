@@ -51,6 +51,8 @@ Helper scripts (same Compose stack; **no** `--build`):
 | **Windows** | `docker-up.bat` | `docker-down.bat` |
 | Any | `docker compose up -d` | `docker compose down` |
 
+On macOS you can also use `./scripts/run-mac.sh` (Docker preferred, bare Node fallback). See [AGENTS.md](AGENTS.md).
+
 `docker-compose.yml` sets `image: ehentai-view:revive`, which must match the loaded tag. Do **not** pass `--build` on notebooks unless you intentionally want a local rebuild.
 
 Port publish binds **`0.0.0.0:${EHV_HOST_PORT}:8080`** so other devices on your LAN can connect (not localhost-only).
@@ -202,10 +204,13 @@ Double-click from the project root (or run from `cmd`). Prefer Docker load+compo
 
 ### macOS (Docker Desktop)
 
-1. Install Docker Desktop; ensure it is running.
-2. Load the image: `gunzip -c ehentai-view-revive.tar.gz | docker load` (or `docker load -i …`).
-3. `cp .env.example .env` then `./start.sh` or `docker compose up -d` (**no** `--build`).
-4. Open `http://localhost:3000` (or `EHV_HOST_PORT`).
+1. Install Docker Desktop; ensure it is running. (Or use bare Node ≥20.9 + pnpm 10 — see [AGENTS.md](AGENTS.md).)
+2. Load the image: `gunzip -c ehentai-view-revive.tar.gz | docker load` (or `docker load -i …`). Confirm tag `ehentai-view:revive`.
+3. `cp .env.example .env` then **either**:
+   - `./scripts/run-mac.sh` — creates `.env` if needed; uses Docker when the image exists, otherwise offers `docker compose build` or bare Node
+   - `./start.sh` or `docker compose up -d` (**no** `--build`) when the image is already loaded
+4. Open `http://localhost:3000` (or `EHV_HOST_PORT`). LAN: `ipconfig getifaddr en0`.
+5. AI / zero-tribal docs: **[AGENTS.md](AGENTS.md)**, checklist: **[SETUP.md](SETUP.md)**.
 
 ### Linux (Docker Engine)
 

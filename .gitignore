@@ -44,3 +44,6 @@ tsconfig.tsbuildinfo
 /data
 # Docker Compose default host mount (./downloads → container /app/data/downloads)
 /downloads
+
+# local agent scratch (never commit)
+.agents/

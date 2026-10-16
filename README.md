@@ -59,6 +59,17 @@ Open **http://localhost:3000** (if port 3000 is taken, set `EHV_HOST_PORT=3001` 
 
 **From iPhone / Android (same Wi‑Fi):** `http://<host-LAN-IP>:3000` — find the IP with `ipconfig` (Windows), `ipconfig getifaddr en0` (macOS), or `hostname -I` (Linux). Allow the port in the host firewall. Details: [DOCKER.md § LAN / mobile access](DOCKER.md#lan--mobile-access).
 
+### macOS
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (preferred) **or** Node ≥20.9 + pnpm 10.
+2. `cp .env.example .env` then either:
+   - **One-shot:** `./scripts/run-mac.sh` (Docker if image `ehentai-view:revive` exists; else offers build / bare Node)
+   - **Compose:** load/build image → `./start.sh`
+   - **Bare Node:** `pnpm install` → `pnpm build` → `pnpm start`
+3. Open http://localhost:3000 (or `EHV_HOST_PORT`). LAN: `ipconfig getifaddr en0` → `http://<IP>:<port>`.
+
+AI / contributor entry (copy-pasteable): **[AGENTS.md](AGENTS.md)**. Human checklist: **[SETUP.md](SETUP.md)**.
+
 Downloaded manga persist on the host under **`./downloads`** by default (compose project directory). Override with `EHV_DOWNLOADS_HOST` in `.env`. Details: [DOCKER.md § Downloads volume](DOCKER.md#downloads-volume-offline-manga).
 
 | Goal | What to do |
@@ -154,7 +165,7 @@ pnpm run dev:app
 # Or on Windows: dev.bat
 ```
 
-Production locally: `pnpm build`, then `start.bat` (Windows) or `node server` / `pnpm start`. Prefer Docker Compose (`./start.sh` / `docker-up.bat`) when you do not want a local Node toolchain. Browse http://localhost:3000 (or `PORT` / `EHV_HOST_PORT`); phones use the host LAN IP (DOCKER.md).
+Production locally: `pnpm build`, then `start.bat` (Windows), `./scripts/run-mac.sh` (macOS), or `pnpm start` / `node server`. Prefer Docker Compose (`./start.sh` / `docker-up.bat`) when you do not want a local Node toolchain. See **[AGENTS.md](AGENTS.md)**. Browse http://localhost:3000 (or `PORT` / `EHV_HOST_PORT`); phones use the host LAN IP (DOCKER.md).
 
 For Docker Compose, see **[Docker & environment (revive)](#docker--environment-revive)** and [DOCKER.md](DOCKER.md).
 

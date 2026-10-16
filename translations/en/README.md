@@ -7,3 +7,5 @@
 [English](/README.md) | [简体中文](/translations/zh-cn/README.md) | [繁體中文](/translations/zh-tw/README.md) | [ภาษาไทย](/translations/th/README.md) | [한국어](/translations/kr/README.md) | [Bahasa Melayu](/translations/ms/README.md)
 
 See [here](/README.md)
+
+Revive setup (macOS / Docker / AI): see root [AGENTS.md](/AGENTS.md), [SETUP.md](/SETUP.md), and [DOCKER.md](/DOCKER.md).
