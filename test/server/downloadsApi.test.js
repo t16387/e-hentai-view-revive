@@ -22,6 +22,9 @@ let server
 let base
 let dir
 
+const LOGIN_COOKIE =
+  'ipb_member_id=1; ipb_pass_hash=' + 'a'.repeat(32)
+
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'ehv-dl-api-'))
   process.env.EHV_DOWNLOADS_DIR = dir
@@ -29,7 +32,9 @@ beforeAll(async () => {
   // clear require cache for app + download modules so they pick up env
   for (const key of Object.keys(require.cache || {})) {
     if (
-      /server\/src\/(app|downloads|cacheRouter|cache)\b/.test(key.replace(/\\/g, '/'))
+      /server\/src\/(app|downloads|cacheRouter|cache)\b/.test(
+        key.replace(/\\/g, '/')
+      )
     ) {
       delete require.cache[key]
     }
@@ -52,12 +57,17 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-async function req(method, path, { body, headers = {} } = {}) {
+async function req(method, path, { body, headers = {}, cookie } = {}) {
   const res = await fetch(base + path, {
     method,
     headers: {
       'X-EHV-CSRF': '1',
       'content-type': 'application/json',
+      ...(cookie !== undefined
+        ? cookie
+          ? { cookie }
+          : {}
+        : { cookie: LOGIN_COOKIE }),
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -71,7 +81,20 @@ async function req(method, path, { body, headers = {} } = {}) {
 }
 
 describe('downloads + cache API', () => {
-  it('lists empty downloads', async () => {
+  it('rejects unauthenticated downloads list', async () => {
+    const r = await req('GET', '/api/downloads', { cookie: '' })
+    expect(r.status).toBe(401)
+    expect(r.json).toMatchObject({ error: true, message: 'No login' })
+  })
+
+  it('rejects spoofed member_id without pass_hash', async () => {
+    const r = await req('GET', '/api/downloads', {
+      cookie: 'ipb_member_id=1',
+    })
+    expect(r.status).toBe(401)
+  })
+
+  it('lists empty downloads when signed in', async () => {
     const r = await req('GET', '/api/downloads')
     expect(r.json).toMatchObject({ error: false, list: [] })
   })
@@ -87,10 +110,21 @@ describe('downloads + cache API', () => {
   it('requires CSRF for POST /api/downloads', async () => {
     const res = await fetch(base + '/api/downloads', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        cookie: LOGIN_COOKIE,
+      },
       body: JSON.stringify({ gid: '1', token: 'abcdef' }),
     })
     expect(res.status).toBe(403)
+  })
+
+  it('requires login even with CSRF for POST /api/downloads', async () => {
+    const r = await req('POST', '/api/downloads', {
+      cookie: '',
+      body: { gid: '1', token: 'abcdef0123' },
+    })
+    expect(r.status).toBe(401)
   })
 
   it('clears server cache', async () => {
@@ -127,6 +161,11 @@ describe('downloads + cache API', () => {
 
     const img = await req('GET', `/api/downloads/${id}/images/0`)
     expect(img.status).toBe(200)
+
+    const anonImg = await req('GET', `/api/downloads/${id}/images/0`, {
+      cookie: '',
+    })
+    expect(anonImg.status).toBe(401)
 
     const cleared = await req('DELETE', '/api/downloads')
     expect(cleared.json).toMatchObject({ error: false })

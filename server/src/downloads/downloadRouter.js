@@ -22,6 +22,27 @@ const badRequest = (res, message = 'bad request') =>
 const isGalleryRef = (gid, token) =>
   /^\d{1,12}$/.test(gid) && /^[0-9a-f]{1,40}$/.test(token)
 
+/**
+ * Offline downloads are sensitive on LAN (Compose binds 0.0.0.0). Require the
+ * same Sign-In session cookies the app sets as HttpOnly — CSRF alone is not
+ * enough (the SPA always sends X-EHV-CSRF: 1). ipb_member_id alone is
+ * spoofable; pass_hash comes only from a real login.
+ */
+function requireDownloadAuth(req, res, next) {
+  const c = req.cookies || {}
+  if (
+    typeof c.ipb_member_id !== 'string' ||
+    !c.ipb_member_id ||
+    typeof c.ipb_pass_hash !== 'string' ||
+    !c.ipb_pass_hash
+  ) {
+    return res.status(401).json({ error: true, message: 'No login' })
+  }
+  next()
+}
+
+router.use(requireDownloadAuth)
+
 router.get('/', async (req, res) => {
   const list = await listDownloads()
   res.json({ error: false, list })
