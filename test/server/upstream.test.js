@@ -7,7 +7,11 @@ const {
   isImagePageUrl,
   canonicalUrl,
 } = require('../../server/src/utils/upstreamUrl')
-const { upstreamCookieString } = require('../../server/src/utils/cookies')
+const {
+  upstreamCookieString,
+  parseCookieToJSON,
+  UPSTREAM_COOKIES,
+} = require('../../server/src/utils/cookies')
 
 describe('image proxy allowlist', () => {
   it.each([
@@ -119,5 +123,31 @@ describe('upstream cookies', () => {
   it('works for anonymous requests', () => {
     expect(upstreamCookieString({})).toBe('nw=1')
     expect(upstreamCookieString(undefined)).toBe('nw=1')
+  })
+})
+
+describe('parseCookieToJSON', () => {
+  it('skips malformed Set-Cookie entries instead of throwing', () => {
+    expect(() => parseCookieToJSON(['not a cookie!!!'])).not.toThrow()
+    expect(parseCookieToJSON(['not a cookie!!!'])).toEqual({})
+  })
+  it('keeps good entries when mixed with bad ones', () => {
+    const out = parseCookieToJSON([
+      'ipb_member_id=42; Path=/',
+      'not a cookie!!!',
+      'ipb_pass_hash=abcd; Path=/',
+      '',
+    ])
+    expect(out).toEqual({ ipb_member_id: '42', ipb_pass_hash: 'abcd' })
+  })
+})
+
+describe('UPSTREAM_COOKIES allowlist', () => {
+  it('includes login secrets and excludes FlareSolverr clearance names', () => {
+    expect(UPSTREAM_COOKIES).toContain('ipb_member_id')
+    expect(UPSTREAM_COOKIES).toContain('ipb_pass_hash')
+    expect(UPSTREAM_COOKIES).toContain('igneous')
+    expect(UPSTREAM_COOKIES).not.toContain('cf_clearance')
+    expect(UPSTREAM_COOKIES).not.toContain('__cf_bm')
   })
 })

@@ -67,6 +67,9 @@ function parseCookieToJSON(arr = []) {
   const res = {}
   arr.forEach((cookieString) => {
     const cookie = Cookie.parse(cookieString)
+    // Skip malformed Set-Cookie lines (Cookie.parse → undefined) so one
+    // bad entry cannot abort login / setting / attachIgneous.
+    if (!cookie || !cookie.key) return
     res[cookie.key] = cookie.value
   })
   return res
