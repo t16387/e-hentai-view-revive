@@ -78,6 +78,8 @@ router.post('/login', async (req, res) => {
   )
   Object.entries({ ...setingCookie, ...userCookie }).forEach(([key, value]) => {
     if (value === undefined || value === null || value === '') return
+    // Only persist known upstream names (never FlareSolverr clearance, etc.)
+    if (!UPSTREAM_COOKIES.includes(key)) return
     if (key === 'igneous' && value === 'mystery')
       throw new Error('[login faild] User cookie "igneous" value error')
     res.cookie(key, value, cookieOption(req))
@@ -90,9 +92,11 @@ router.post('/setting', async (req, res) => {
     upstreamCookieString(req.cookies),
     getSite().siteName
   )
-  Object.entries(cookie).forEach(([key, value]) =>
+  Object.entries(cookie).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+    if (!UPSTREAM_COOKIES.includes(key)) return
     res.cookie(key, value, cookieOption(req))
-  )
+  })
 
   cache.del(
     cache.keys().filter((v) => v.includes(`[g${userCacheScope(req.cookies)}]`))
